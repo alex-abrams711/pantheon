@@ -115,91 +115,91 @@
 
 ## Phase 4: Spec Kit Integration
 
-### T007: Integration Utilities (`src/pantheon/integrations/spec_kit.py`)
-- [ ] Create verify_agents_installed() function
+### T007: Integration Utilities (`src/pantheon/integrations/spec_kit.py`) ✅
+- [x] Create verify_agents_installed() function
   - Check .claude/agents/dev.md exists
-- [ ] Create verify_spec_kit() function
+- [x] Create verify_spec_kit() function
   - Check .specify/ exists
   - Check .claude/commands/ exists
-- [ ] Create create_backup() function
+- [x] Create create_backup() function
   - Generate timestamped backup directory
   - Copy implement.md, plan.md, tasks.md
   - Return backup directory path
-- [ ] Create validate_integration() function
+- [x] Create validate_integration() function
   - Parse modified files as markdown
   - Verify sections present
   - Return validation results
-- [ ] Verification: Unit test each function
+- [x] Verification: Unit test each function
 - **Dependencies**: T002
 - **Quality Standards**:
-  - [ ] All functions have docstrings
-  - [ ] Error handling for missing files
-  - [ ] Returns clear success/failure status
-  - [ ] Unit tests pass
+  - [x] All functions have docstrings
+  - [x] Error handling for missing files
+  - [x] Returns clear success/failure status
+  - [x] Unit tests pass
 
-### T008: Command Integration Functions (`src/pantheon/integrations/spec_kit.py`)
-- [ ] Create integrate_implement_command() function
+### T008: Command Integration Functions (`src/pantheon/integrations/spec_kit.py`) ✅
+- [x] Create integrate_implement_command() function
   - Read .claude/commands/implement.md
   - Insert "Agent Integration" section after title
   - Write updated file
-- [ ] Create integrate_plan_command() function
+- [x] Create integrate_plan_command() function
   - Read .claude/commands/plan.md
   - Insert "Quality Standards" section
   - Write updated file
-- [ ] Create integrate_tasks_command() function
+- [x] Create integrate_tasks_command() function
   - Read .claude/commands/tasks.md
   - Insert "Task Format" section
   - Write updated file
-- [ ] Verification: Test on sample Spec Kit files
+- [x] Verification: Test on sample Spec Kit files
 - **Dependencies**: T007
 - **Quality Standards**:
-  - [ ] Preserves existing content
-  - [ ] Inserts at correct location
-  - [ ] No content corruption
-  - [ ] Idempotent (can run safely twice)
+  - [x] Preserves existing content
+  - [x] Inserts at correct location
+  - [x] No content corruption
+  - [x] Idempotent (can run safely twice)
 
-### T009: Integration Directive Content (`src/pantheon/integrations/spec_kit.py`)
-- [ ] Define IMPLEMENT_DIRECTIVE constant with markdown text
-- [ ] Define PLAN_DIRECTIVE constant with markdown text
-- [ ] Define TASKS_DIRECTIVE constant with markdown text
-- [ ] Add section markers for easy detection
-- [ ] Verification: Directives match design spec
+### T009: Integration Directive Content (`src/pantheon/integrations/spec_kit.py`) ✅
+- [x] Define IMPLEMENT_DIRECTIVE constant with markdown text
+- [x] Define PLAN_DIRECTIVE constant with markdown text
+- [x] Define TASKS_DIRECTIVE constant with markdown text
+- [x] Add section markers for easy detection
+- [x] Verification: Directives match design spec
 - **Dependencies**: T008
 - **Quality Standards**:
-  - [ ] Valid markdown syntax
-  - [ ] Clear, concise instructions
-  - [ ] Matches design document exactly
+  - [x] Valid markdown syntax
+  - [x] Clear, concise instructions
+  - [x] Matches design document exactly
 
-### T010: Main Integration Flow (`src/pantheon/integrations/spec_kit.py`)
-- [ ] Create integrate_spec_kit() main function
-- [ ] Step 1: Call verify_agents_installed()
-- [ ] Step 2: Call verify_spec_kit()
-- [ ] Step 3: Call create_backup()
-- [ ] Step 4: Call integration functions
-- [ ] Step 5: Call validate_integration()
-- [ ] Step 6: Print summary report
-- [ ] Add error handling for each step
-- [ ] Verification: Integration test on sample project
+### T010: Main Integration Flow (`src/pantheon/integrations/spec_kit.py`) ✅
+- [x] Create integrate_spec_kit() main function
+- [x] Step 1: Call verify_agents_installed()
+- [x] Step 2: Call verify_spec_kit()
+- [x] Step 3: Call create_backup()
+- [x] Step 4: Call integration functions
+- [x] Step 5: Call validate_integration()
+- [x] Step 6: Print summary report
+- [x] Add error handling for each step
+- [x] Verification: Integration test on sample project
 - **Dependencies**: T007, T008, T009
 - **Quality Standards**:
-  - [ ] All steps execute in order
-  - [ ] Rollback on any failure
-  - [ ] Clear status reporting
-  - [ ] Backup created successfully
+  - [x] All steps execute in order
+  - [x] Rollback on any failure
+  - [x] Clear status reporting
+  - [x] Backup created successfully
 
-### T011: Integrate Command (`src/pantheon/cli.py`)
-- [ ] Implement `pantheon integrate` command
-- [ ] Import integrate_spec_kit from integrations
-- [ ] Call integrate_spec_kit() with error handling
-- [ ] Display results to user
-- [ ] Add --dry-run flag for preview
-- [ ] Verification: Run integrate on test project
+### T011: Integrate Command (`src/pantheon/cli.py`) ✅
+- [x] Implement `pantheon integrate` command
+- [x] Import integrate_spec_kit from integrations
+- [x] Call integrate_spec_kit() with error handling
+- [x] Display results to user
+- [x] Add --dry-run flag for preview
+- [x] Verification: Run integrate on test project
 - **Dependencies**: T010
 - **Quality Standards**:
-  - [ ] Command works end-to-end
-  - [ ] User feedback clear
-  - [ ] Errors handled gracefully
-  - [ ] Dry-run shows changes without applying
+  - [x] Command works end-to-end
+  - [x] User feedback clear
+  - [x] Errors handled gracefully
+  - [x] Dry-run shows changes without applying
 
 ---
 

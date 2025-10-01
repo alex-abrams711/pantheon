@@ -138,6 +138,57 @@ def integrate(dry_run):
 
 
 @main.command()
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Skip confirmation prompt",
+)
+def rollback(force):
+    """Rollback to the most recent backup.
+
+    Restores Spec Kit command files from the most recent integration backup.
+    """
+    from pantheon.integrations.spec_kit import rollback_integration, find_latest_backup
+
+    cwd = Path.cwd()
+
+    # Find backup first to show user what will be restored
+    backup_dir = find_latest_backup(cwd)
+
+    if not backup_dir:
+        click.echo("❌ No backup found. Nothing to rollback.")
+        return
+
+    # Show what will be restored
+    click.echo(f"📦 Found backup: {backup_dir.relative_to(cwd)}/\n")
+    click.echo("Files to restore:")
+    for backup_file in backup_dir.glob("*.md"):
+        click.echo(f"  • {backup_file.name}")
+
+    # Confirm unless --force
+    if not force:
+        click.echo()
+        if not click.confirm("Restore these files from backup?"):
+            click.echo("Rollback cancelled.")
+            return
+
+    # Perform rollback
+    click.echo("\nRolling back...\n")
+    result = rollback_integration(cwd)
+
+    if result["success"]:
+        click.echo("✅ Rollback successful!\n")
+        click.echo("Restored files:")
+        for filename in result["files_restored"]:
+            click.echo(f"  ✓ {filename}")
+        click.echo(f"\n📦 Backup used: {result['backup_dir'].relative_to(cwd)}/")
+    else:
+        click.echo("❌ Rollback failed!\n")
+        for error in result["errors"]:
+            click.echo(f"  • {error}")
+
+
+@main.command()
 def list():
     """List available agents and their installation status.
 
