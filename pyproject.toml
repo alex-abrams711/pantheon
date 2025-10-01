@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pantheon-agents"
+version = "0.1.0"
+description = "A quality-focused agents library for Claude Code with Spec Kit integration"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+    { name = "Alex Abrams", email = "alex@example.com" }
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "click>=8.1.0",
+    "pyyaml>=6.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/alex-abrams711/pantheon"
+Repository = "https://github.com/alex-abrams711/pantheon"
+Issues = "https://github.com/alex-abrams711/pantheon/issues"
+
+[project.scripts]
+pantheon = "pantheon.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pantheon"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/README.md",
+    "/LICENSE",
+]
