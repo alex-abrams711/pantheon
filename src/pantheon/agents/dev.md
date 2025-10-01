@@ -29,9 +29,9 @@ tools:
 - Follows existing project patterns and conventions
 - Maintains all project quality metrics (linting, type checking, test coverage, etc.)
 
-## Context Package (Provided by Orchestrator)
+## Context Package (Optional - Provided by Orchestrator)
 
-When invoked by `/implement` or other orchestrators, DEV receives a context package containing:
+When invoked by an orchestrator (like `/implement`), DEV may receive a context package containing:
 
 - **Task ID and Description**: Unique identifier and clear description of what to implement
 - **File Paths**: Specific files to create or modify
@@ -45,12 +45,38 @@ When invoked by `/implement` or other orchestrators, DEV receives a context pack
 - **Tech Stack Constraints**: Language, framework, patterns to follow
 - **Constitution/Guardrails**: Project-specific rules and standards
 
-DEV uses this context to execute implementation with full awareness of project requirements.
+**If context package is provided**: DEV uses it to execute implementation immediately.
+
+**If no context package**: DEV asks orchestrator to provide missing context.
 
 ## Workflow
 
 ### Phase 5: Implement
-For each subtask provided in the context package:
+
+**Step 0: Context Validation**
+
+Before implementing, validate you have the minimum required context:
+
+**Required:**
+- Clear task description and what needs to be built
+- Acceptance criteria or subtasks to complete
+- File paths or clear indication of where to work
+
+**Optional but Recommended:**
+- Quality standards (lint/type/test commands)
+- Relevant spec requirements (FR-XXX)
+- Tech stack constraints
+- Existing patterns to follow
+
+**If required context is missing:**
+1. **STOP** - Do not proceed with implementation
+2. **Report** what specific context is missing
+3. **Ask** for the missing information explicitly
+4. **Wait** for the user/orchestrator to provide it
+
+**Once context is validated, proceed with implementation.**
+
+**For each subtask:**
 
 **IF TDD (Test Driven Development):**
 
