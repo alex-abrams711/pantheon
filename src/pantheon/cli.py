@@ -1,8 +1,9 @@
 """CLI for Pantheon agents library."""
 
-import click
 import shutil
 from pathlib import Path
+
+import click
 
 from pantheon import __version__
 
@@ -10,7 +11,7 @@ from pantheon import __version__
 @click.group()
 @click.version_option(version=__version__, prog_name="pantheon")
 @click.pass_context
-def main(ctx):
+def main(ctx: click.Context) -> None:
     """Pantheon: Quality-focused agents library for Claude Code.
 
     Pantheon provides production-ready agents with quality-focused workflows
@@ -25,7 +26,7 @@ def main(ctx):
     is_flag=True,
     help="Automatically integrate with Spec Kit if detected (skip prompt)",
 )
-def init(auto_integrate):
+def init(auto_integrate: bool) -> None:
     """Initialize Pantheon agents in your project.
 
     This command:
@@ -79,7 +80,10 @@ def init(auto_integrate):
             )
 
         if should_integrate:
-            click.echo("\n💡 Run 'pantheon integrate' to add DEV agent integration to Spec Kit commands.")
+            click.echo(
+                "\n💡 Run 'pantheon integrate' to add DEV agent "
+                "integration to Spec Kit commands."
+            )
 
     click.echo("\n✅ Initialization complete!")
 
@@ -90,7 +94,7 @@ def init(auto_integrate):
     is_flag=True,
     help="Preview changes without applying them",
 )
-def integrate(dry_run):
+def integrate(dry_run: bool) -> None:
     """Integrate DEV agent with Spec Kit commands.
 
     Adds minimal integration directives to /implement, /plan, and /tasks
@@ -106,7 +110,19 @@ def integrate(dry_run):
     # Run integration
     click.echo("Integrating DEV agent with Spec Kit...\n")
 
-    result = integrate_spec_kit(cwd) if not dry_run else {"success": False, "errors": ["Dry run mode"]}
+    from pantheon.integrations.spec_kit import IntegrationResult
+
+    result: IntegrationResult = (
+        integrate_spec_kit(cwd)
+        if not dry_run
+        else {
+            "success": False,
+            "backup_dir": None,
+            "files_modified": [],
+            "errors": ["Dry run mode"],
+            "validation": {"valid": False, "errors": [], "files_checked": []}
+        }
+    )
 
     if dry_run:
         # Show what would be done
@@ -120,7 +136,9 @@ def integrate(dry_run):
     # Report results
     if result["success"]:
         click.echo("✅ Integration successful!\n")
-        click.echo(f"📦 Backup created: {result['backup_dir'].relative_to(cwd)}/\n")
+        if result["backup_dir"]:
+            backup_path = result["backup_dir"].relative_to(cwd)
+            click.echo(f"📦 Backup created: {backup_path}/\n")
         click.echo("Modified files:")
         for filename in result["files_modified"]:
             click.echo(f"  ✓ {filename}")
@@ -133,7 +151,8 @@ def integrate(dry_run):
             click.echo(f"  • {error}")
 
         if result["backup_dir"]:
-            click.echo(f"\n📦 Backup available at: {result['backup_dir'].relative_to(cwd)}/")
+            backup_path = result["backup_dir"].relative_to(cwd)
+            click.echo(f"\n📦 Backup available at: {backup_path}/")
             click.echo("   Run 'pantheon rollback' to restore")
 
 
@@ -143,12 +162,12 @@ def integrate(dry_run):
     is_flag=True,
     help="Skip confirmation prompt",
 )
-def rollback(force):
+def rollback(force: bool) -> None:
     """Rollback to the most recent backup.
 
     Restores Spec Kit command files from the most recent integration backup.
     """
-    from pantheon.integrations.spec_kit import rollback_integration, find_latest_backup
+    from pantheon.integrations.spec_kit import find_latest_backup, rollback_integration
 
     cwd = Path.cwd()
 
@@ -181,7 +200,9 @@ def rollback(force):
         click.echo("Restored files:")
         for filename in result["files_restored"]:
             click.echo(f"  ✓ {filename}")
-        click.echo(f"\n📦 Backup used: {result['backup_dir'].relative_to(cwd)}/")
+        if result["backup_dir"]:
+            backup_path = result["backup_dir"].relative_to(cwd)
+            click.echo(f"\n📦 Backup used: {backup_path}/")
     else:
         click.echo("❌ Rollback failed!\n")
         for error in result["errors"]:
@@ -189,7 +210,7 @@ def rollback(force):
 
 
 @main.command()
-def list():
+def list() -> None:
     """List available agents and their installation status.
 
     Shows agents available in the Pantheon library and indicates
@@ -225,9 +246,10 @@ def list():
         click.echo(f"  {agent['name']:<10} ({agent['file']:<15}) [{status}]")
 
     if not agents_dir.exists():
-        click.echo(f"\n💡 Run 'pantheon init' to install agents to {agents_dir.relative_to(cwd)}/")
+        agents_path = agents_dir.relative_to(cwd)
+        click.echo(f"\n💡 Run 'pantheon init' to install agents to {agents_path}/")
     elif not any(a["installed"] for a in available_agents):
-        click.echo(f"\n💡 Run 'pantheon init' to install agents")
+        click.echo("\n💡 Run 'pantheon init' to install agents")
 
 
 if __name__ == "__main__":

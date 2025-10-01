@@ -1,9 +1,44 @@
 """Spec Kit integration utilities."""
 
+import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
-import shutil
+from typing import Optional, TypedDict
+
+
+class ValidationResult(TypedDict):
+    """Type for validation result dictionary."""
+
+    valid: bool
+    errors: list[str]
+    files_checked: list[str]
+
+
+class IntegrationResult(TypedDict):
+    """Type for integration result dictionary."""
+
+    success: bool
+    backup_dir: Optional[Path]
+    files_modified: list[str]
+    errors: list[str]
+    validation: ValidationResult
+
+
+class RestoreResult(TypedDict):
+    """Type for restore result dictionary."""
+
+    success: bool
+    files_restored: list[str]
+    errors: list[str]
+
+
+class RollbackResult(TypedDict):
+    """Type for rollback result dictionary."""
+
+    success: bool
+    backup_dir: Optional[Path]
+    files_restored: list[str]
+    errors: list[str]
 
 
 def verify_agents_installed(project_root: Optional[Path] = None) -> bool:
@@ -71,7 +106,7 @@ def create_backup(project_root: Optional[Path] = None) -> Path:
     return backup_dir
 
 
-def validate_integration(project_root: Optional[Path] = None) -> dict:
+def validate_integration(project_root: Optional[Path] = None) -> ValidationResult:
     """Validate that integration was successful.
 
     Args:
@@ -89,7 +124,7 @@ def validate_integration(project_root: Optional[Path] = None) -> dict:
         project_root = Path.cwd()
 
     commands_dir = project_root / ".claude" / "commands"
-    results = {
+    results: ValidationResult = {
         "valid": True,
         "errors": [],
         "files_checked": []
@@ -115,7 +150,10 @@ def validate_integration(project_root: Optional[Path] = None) -> dict:
             content = filepath.read_text()
             if section_marker not in content:
                 results["valid"] = False
-                results["errors"].append(f"{filename} missing integration section: {section_marker}")
+                error_msg = (
+                    f"{filename} missing integration section: {section_marker}"
+                )
+                results["errors"].append(error_msg)
         except Exception as e:
             results["valid"] = False
             results["errors"].append(f"Error reading {filename}: {str(e)}")
@@ -285,7 +323,7 @@ def integrate_tasks_command(project_root: Optional[Path] = None) -> bool:
     return True
 
 
-def integrate_spec_kit(project_root: Optional[Path] = None) -> dict:
+def integrate_spec_kit(project_root: Optional[Path] = None) -> IntegrationResult:
     """Main integration flow: Add DEV agent directives to Spec Kit commands.
 
     Args:
@@ -304,12 +342,12 @@ def integrate_spec_kit(project_root: Optional[Path] = None) -> dict:
     if project_root is None:
         project_root = Path.cwd()
 
-    result = {
+    result: IntegrationResult = {
         "success": False,
         "backup_dir": None,
         "files_modified": [],
         "errors": [],
-        "validation": {}
+        "validation": {"valid": False, "errors": [], "files_checked": []}
     }
 
     # Step 1: Verify prerequisites
@@ -318,7 +356,9 @@ def integrate_spec_kit(project_root: Optional[Path] = None) -> dict:
         return result
 
     if not verify_spec_kit(project_root):
-        result["errors"].append("Spec Kit not detected. Ensure .specify/ and .claude/commands/ exist.")
+        result["errors"].append(
+            "Spec Kit not detected. Ensure .specify/ and .claude/commands/ exist."
+        )
         return result
 
     # Step 2: Create backup
@@ -380,7 +420,9 @@ def find_latest_backup(project_root: Optional[Path] = None) -> Optional[Path]:
     return backup_dirs[0]
 
 
-def restore_files(backup_dir: Path, project_root: Optional[Path] = None) -> dict:
+def restore_files(
+    backup_dir: Path, project_root: Optional[Path] = None
+) -> RestoreResult:
     """Restore command files from a backup directory.
 
     Args:
@@ -398,7 +440,7 @@ def restore_files(backup_dir: Path, project_root: Optional[Path] = None) -> dict
     if project_root is None:
         project_root = Path.cwd()
 
-    result = {
+    result: RestoreResult = {
         "success": False,
         "files_restored": [],
         "errors": []
@@ -425,7 +467,7 @@ def restore_files(backup_dir: Path, project_root: Optional[Path] = None) -> dict
     return result
 
 
-def rollback_integration(project_root: Optional[Path] = None) -> dict:
+def rollback_integration(project_root: Optional[Path] = None) -> RollbackResult:
     """Rollback to the most recent backup.
 
     Args:
@@ -443,7 +485,7 @@ def rollback_integration(project_root: Optional[Path] = None) -> dict:
     if project_root is None:
         project_root = Path.cwd()
 
-    result = {
+    result: RollbackResult = {
         "success": False,
         "backup_dir": None,
         "files_restored": [],
