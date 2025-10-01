@@ -1,5 +1,15 @@
 # Claude Instructions
 
+## Initial Context
+
+ALWAYS read through the following files and present your understanding, at the beginning of every new conversation:
+
+- agents/dev.md
+- docs/research.md
+- docs/design.md
+
+NEVER access the docs/archive directory.
+
 ## Working Agreements
 
 ### DOs
