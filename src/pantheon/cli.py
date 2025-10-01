@@ -85,6 +85,59 @@ def init(auto_integrate):
 
 
 @main.command()
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Preview changes without applying them",
+)
+def integrate(dry_run):
+    """Integrate DEV agent with Spec Kit commands.
+
+    Adds minimal integration directives to /implement, /plan, and /tasks
+    commands to enable DEV agent delegation.
+    """
+    from pantheon.integrations.spec_kit import integrate_spec_kit
+
+    cwd = Path.cwd()
+
+    if dry_run:
+        click.echo("🔍 Dry run mode - no changes will be made\n")
+
+    # Run integration
+    click.echo("Integrating DEV agent with Spec Kit...\n")
+
+    result = integrate_spec_kit(cwd) if not dry_run else {"success": False, "errors": ["Dry run mode"]}
+
+    if dry_run:
+        # Show what would be done
+        click.echo("Would create backup directory")
+        click.echo("Would modify:")
+        click.echo("  - .claude/commands/implement.md")
+        click.echo("  - .claude/commands/plan.md")
+        click.echo("  - .claude/commands/tasks.md")
+        return
+
+    # Report results
+    if result["success"]:
+        click.echo("✅ Integration successful!\n")
+        click.echo(f"📦 Backup created: {result['backup_dir'].relative_to(cwd)}/\n")
+        click.echo("Modified files:")
+        for filename in result["files_modified"]:
+            click.echo(f"  ✓ {filename}")
+
+        click.echo("\n💡 DEV agent is now integrated with Spec Kit")
+        click.echo("   Run /implement to use DEV for task execution")
+    else:
+        click.echo("❌ Integration failed!\n")
+        for error in result["errors"]:
+            click.echo(f"  • {error}")
+
+        if result["backup_dir"]:
+            click.echo(f"\n📦 Backup available at: {result['backup_dir'].relative_to(cwd)}/")
+            click.echo("   Run 'pantheon rollback' to restore")
+
+
+@main.command()
 def list():
     """List available agents and their installation status.
 
