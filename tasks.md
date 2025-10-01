@@ -70,46 +70,46 @@
 
 ## Phase 3: CLI Implementation
 
-### T004: CLI Entry Point (`src/pantheon/cli.py`)
-- [ ] Import Click framework
-- [ ] Create main CLI group with --version flag
-- [ ] Add basic error handling
-- [ ] Add help text and descriptions
-- [ ] Verification: Run `pantheon --help` successfully
+### T004: CLI Entry Point (`src/pantheon/cli.py`) ✅
+- [x] Import Click framework
+- [x] Create main CLI group with --version flag
+- [x] Add basic error handling
+- [x] Add help text and descriptions
+- [x] Verification: Run `pantheon --help` successfully
 - **Dependencies**: T001
 - **Quality Standards**:
-  - [ ] CLI command available
-  - [ ] Help text displays correctly
-  - [ ] Version displays correctly
-  - [ ] No runtime errors
+  - [x] CLI command available
+  - [x] Help text displays correctly
+  - [x] Version displays correctly
+  - [x] No runtime errors
 
-### T005: Init Command (`src/pantheon/cli.py`)
-- [ ] Implement `pantheon init` command
-- [ ] Check for/create `.claude/` directory
-- [ ] Check for/create `.claude/agents/` directory
-- [ ] Copy dev.md from package to `.claude/agents/dev.md`
-- [ ] Detect Spec Kit (.specify/ and .claude/commands/)
-- [ ] Prompt for integration if Spec Kit found
-- [ ] Add success/error messages
-- [ ] Verification: Run init in test directory, verify file copied
+### T005: Init Command (`src/pantheon/cli.py`) ✅
+- [x] Implement `pantheon init` command
+- [x] Check for/create `.claude/` directory
+- [x] Check for/create `.claude/agents/` directory
+- [x] Copy dev.md from package to `.claude/agents/dev.md`
+- [x] Detect Spec Kit (.specify/ and .claude/commands/)
+- [x] Prompt for integration if Spec Kit found
+- [x] Add success/error messages
+- [x] Verification: Run init in test directory, verify file copied
 - **Dependencies**: T003, T004
 - **Quality Standards**:
-  - [ ] File operations work correctly
-  - [ ] Handles existing files gracefully
-  - [ ] Clear user feedback
-  - [ ] No file corruption
+  - [x] File operations work correctly
+  - [x] Handles existing files gracefully
+  - [x] Clear user feedback
+  - [x] No file corruption
 
-### T006: List Command (`src/pantheon/cli.py`)
-- [ ] Implement `pantheon list` command
-- [ ] List agents available in package
-- [ ] Check which agents installed locally
-- [ ] Display formatted output (table or list)
-- [ ] Verification: Run list, verify output correct
+### T006: List Command (`src/pantheon/cli.py`) ✅
+- [x] Implement `pantheon list` command
+- [x] List agents available in package
+- [x] Check which agents installed locally
+- [x] Display formatted output (table or list)
+- [x] Verification: Run list, verify output correct
 - **Dependencies**: T004
 - **Quality Standards**:
-  - [ ] Accurate agent detection
-  - [ ] Clean, readable output
-  - [ ] No errors if .claude/ missing
+  - [x] Accurate agent detection
+  - [x] Clean, readable output
+  - [x] No errors if .claude/ missing
 
 ---
 

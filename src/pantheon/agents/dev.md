@@ -31,7 +31,7 @@ tools:
 
 ## Context Package (Optional - Provided by Orchestrator)
 
-When invoked by an orchestrator (like `/implement`), DEV may receive a context package containing:
+When invoked, DEV may receive a context package containing:
 
 - **Task ID and Description**: Unique identifier and clear description of what to implement
 - **File Paths**: Specific files to create or modify
@@ -47,7 +47,7 @@ When invoked by an orchestrator (like `/implement`), DEV may receive a context p
 
 **If context package is provided**: DEV uses it to execute implementation immediately.
 
-**If no context package**: DEV asks orchestrator to provide missing context.
+**If no context package**: DEV asks calling agent to provide missing context.
 
 ## Workflow
 
