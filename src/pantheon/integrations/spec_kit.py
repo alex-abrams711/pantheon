@@ -243,13 +243,30 @@ def integrate_implement_command(project_root: Optional[Path] = None) -> bool:
     if "## Agent Integration" in content:
         return True  # Already integrated
 
-    # Insert after the first heading
+    # Insert after YAML frontmatter or at beginning if no frontmatter
     lines = content.split('\n')
+    insert_index = 0
+    in_frontmatter = False
+    frontmatter_end_found = False
+
     for i, line in enumerate(lines):
-        if line.startswith('# '):
-            # Insert directive after title
-            lines.insert(i + 1, '\n' + IMPLEMENT_DIRECTIVE)
+        # Detect start of YAML frontmatter
+        if i == 0 and line.strip() == '---':
+            in_frontmatter = True
+            continue
+
+        # Detect end of YAML frontmatter
+        if in_frontmatter and line.strip() == '---':
+            insert_index = i + 1
+            frontmatter_end_found = True
             break
+
+    # If no frontmatter found, insert at beginning
+    if not frontmatter_end_found:
+        insert_index = 0
+
+    # Insert directive at the determined position
+    lines.insert(insert_index, '\n' + IMPLEMENT_DIRECTIVE)
 
     filepath.write_text('\n'.join(lines))
     return True
@@ -278,12 +295,30 @@ def integrate_plan_command(project_root: Optional[Path] = None) -> bool:
     if "## Quality Standards (Required for DEV Integration)" in content:
         return True  # Already integrated
 
-    # Insert after the first heading
+    # Insert after YAML frontmatter or at beginning if no frontmatter
     lines = content.split('\n')
+    insert_index = 0
+    in_frontmatter = False
+    frontmatter_end_found = False
+
     for i, line in enumerate(lines):
-        if line.startswith('# '):
-            lines.insert(i + 1, '\n' + PLAN_DIRECTIVE)
+        # Detect start of YAML frontmatter
+        if i == 0 and line.strip() == '---':
+            in_frontmatter = True
+            continue
+
+        # Detect end of YAML frontmatter
+        if in_frontmatter and line.strip() == '---':
+            insert_index = i + 1
+            frontmatter_end_found = True
             break
+
+    # If no frontmatter found, insert at beginning
+    if not frontmatter_end_found:
+        insert_index = 0
+
+    # Insert directive at the determined position
+    lines.insert(insert_index, '\n' + PLAN_DIRECTIVE)
 
     filepath.write_text('\n'.join(lines))
     return True
@@ -312,12 +347,30 @@ def integrate_tasks_command(project_root: Optional[Path] = None) -> bool:
     if "## Task Format (Required for DEV Integration)" in content:
         return True  # Already integrated
 
-    # Insert after the first heading
+    # Insert after YAML frontmatter or at beginning if no frontmatter
     lines = content.split('\n')
+    insert_index = 0
+    in_frontmatter = False
+    frontmatter_end_found = False
+
     for i, line in enumerate(lines):
-        if line.startswith('# '):
-            lines.insert(i + 1, '\n' + TASKS_DIRECTIVE)
+        # Detect start of YAML frontmatter
+        if i == 0 and line.strip() == '---':
+            in_frontmatter = True
+            continue
+
+        # Detect end of YAML frontmatter
+        if in_frontmatter and line.strip() == '---':
+            insert_index = i + 1
+            frontmatter_end_found = True
             break
+
+    # If no frontmatter found, insert at beginning
+    if not frontmatter_end_found:
+        insert_index = 0
+
+    # Insert directive at the determined position
+    lines.insert(insert_index, '\n' + TASKS_DIRECTIVE)
 
     filepath.write_text('\n'.join(lines))
     return True

@@ -10,7 +10,7 @@ Pantheon provides production-ready agents that implement structured, quality-fir
 - 🔧 **Spec Kit Integration**: Seamless integration with GitHub's Spec Kit framework
 - 🔄 **Safe Rollback**: Automatic backups and easy rollback capability
 - 📦 **Simple Distribution**: Install via `uvx` - no configuration needed
-- ✅ **Comprehensive Testing**: 25 tests with 91% coverage on core functionality
+- ✅ **Comprehensive Testing**: 27 tests with 92% coverage on core functionality
 
 ## Quick Start
 
@@ -19,13 +19,19 @@ Pantheon provides production-ready agents that implement structured, quality-fir
 Install and initialize in one step using `uvx`:
 
 ```bash
+# Once published to PyPI
 uvx pantheon-agents init
 ```
 
-Or install globally:
+For local development, install from source:
 
 ```bash
-uv tool install pantheon-agents
+# Clone and install
+git clone https://github.com/alex-abrams711/pantheon.git
+cd pantheon
+uv tool install .
+
+# Initialize in your project
 pantheon init
 ```
 
@@ -214,7 +220,7 @@ pantheon rollback
 
 - Python 3.9+
 - Claude Code (for using agents)
-- Spec Kit (optional, for integration)
+- Spec Kit v0.0.55+ (optional, for integration)
 
 ## Development
 
@@ -251,10 +257,10 @@ ruff check src/ tests/
 
 ### Quality Standards
 
-- **Test Coverage**: >80% on core modules (currently 91%)
+- **Test Coverage**: >80% on core modules (currently 92%)
 - **Type Checking**: mypy strict mode, 0 errors
 - **Linting**: ruff with pycodestyle, pyflakes, isort, pep8-naming
-- **All Tests Pass**: 25/25 tests passing
+- **All Tests Pass**: 27/27 tests passing
 
 ## Contributing
 

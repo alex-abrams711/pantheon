@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2025-10-01
+
+### Fixed
+- **Spec Kit v0.0.55+ Compatibility**: Updated integration logic to properly detect and handle YAML frontmatter in Spec Kit command files
+  - Integration directives now correctly insert after frontmatter closing `---` instead of after markdown headings
+  - Added fallback for command files without YAML frontmatter
+  - Maintains idempotency (no duplicate sections when running `pantheon integrate` multiple times)
+  - All integration validation tests updated to match Spec Kit v0.0.55 structure
+
+### Changed
+- Integration functions (`integrate_implement_command`, `integrate_plan_command`, `integrate_tasks_command`) now use YAML frontmatter detection instead of markdown heading detection
+- Test fixtures updated to match real Spec Kit v0.0.55 command file structure
+- Test coverage increased to 92% on `spec_kit.py` (27 tests total, up from 25)
+
+### Technical
+- Added edge case tests for files without frontmatter and malformed frontmatter
+- Enhanced integration validation with more robust parsing
+- Verified end-to-end workflow with actual Spec Kit v0.0.55 installation
+
 ## [0.1.0] - 2025-10-01
 
 ### Added
@@ -46,4 +65,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Development setup guide
 - Contributing guidelines
 
+[0.1.1]: https://github.com/alex-abrams711/pantheon/releases/tag/v0.1.1
 [0.1.0]: https://github.com/alex-abrams711/pantheon/releases/tag/v0.1.0

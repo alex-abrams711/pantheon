@@ -376,6 +376,99 @@
 
 ---
 
+## Phase 9: Bug Fix - Spec Kit v0.0.55 Compatibility
+
+### T022: Fix Integration Logic for YAML Frontmatter (`src/pantheon/integrations/spec_kit.py`) ✅
+- [x] Update `integrate_implement_command()` function:
+  - [x] Replace heading detection logic (`if line.startswith('# ')`) with YAML frontmatter detection
+  - [x] Insert directive after closing `---` of frontmatter
+  - [x] Add fallback: if no YAML frontmatter, insert at beginning of file
+  - [x] Preserve idempotency check (skip if already integrated)
+- [x] Update `integrate_plan_command()` function:
+  - [x] Apply same YAML frontmatter detection logic
+  - [x] Insert directive after closing `---`
+  - [x] Add fallback for files without frontmatter
+- [x] Update `integrate_tasks_command()` function:
+  - [x] Apply same YAML frontmatter detection logic
+  - [x] Insert directive after closing `---`
+  - [x] Add fallback for files without frontmatter
+- [x] Verification: Manual test with actual Spec Kit v0.0.55 files
+- **Dependencies**: None (bug fix for existing code)
+- **Quality Standards**:
+  - [x] Correctly detects YAML frontmatter (opening `---` and closing `---`)
+  - [x] Inserts directives in correct location (after frontmatter)
+  - [x] Fallback handles files without frontmatter
+  - [x] Idempotency maintained (no duplicate sections)
+  - [x] No existing content corrupted (verified with diff)
+
+### T023: Update Tests for YAML Frontmatter Format (`tests/test_spec_kit.py`, `tests/test_integration.py`) ✅
+- [x] Update mock Spec Kit command files in test fixtures:
+  - [x] Add YAML frontmatter to mock files (matches Spec Kit v0.0.55 structure)
+  - [x] Remove markdown headings (`#`) from mock files if present
+  - [x] Ensure mock files match actual Spec Kit structure
+- [x] Update integration test assertions:
+  - [x] Verify directives appear after YAML frontmatter
+  - [x] Update expected content checks
+- [x] Add new test case: Integration with files that have no frontmatter
+- [x] Add new test case: Integration with malformed frontmatter
+- [x] Verification: All 27 tests pass with updated logic (up from 25)
+- **Dependencies**: T022
+- **Quality Standards**:
+  - [x] All existing tests pass (27/27)
+  - [x] New edge cases covered (no frontmatter, malformed frontmatter)
+  - [x] Test fixtures match real Spec Kit v0.0.55 structure
+  - [x] No test pollution or flakiness
+  - [x] Coverage maintained at 92% on spec_kit.py
+
+### T024: End-to-End Validation with Real Spec Kit v0.0.55 ✅
+- [x] Create fresh test project (clean directory)
+- [x] Install Spec Kit v0.0.55 using uvx (used existing test project)
+- [x] Run `pantheon init` (should succeed)
+- [x] Run `pantheon integrate` (should succeed)
+- [x] Verify directives inserted in all 3 command files:
+  - [x] implement.md contains "## Agent Integration" after frontmatter (line 5)
+  - [x] plan.md contains "## Quality Standards" after frontmatter (line 5)
+  - [x] tasks.md contains "## Task Format" after frontmatter (line 5)
+- [x] Verify original content preserved (no corruption)
+- [x] Test idempotency: Run `pantheon integrate` again (should not duplicate)
+- [x] Test rollback: Run `pantheon rollback` (should restore originals)
+- [x] Verification: Complete integration workflow successful
+- **Dependencies**: T023
+- **Quality Standards**:
+  - [x] Integration completes without errors
+  - [x] All 3 files contain correct directives
+  - [x] Validation passes (no errors reported)
+  - [x] Content not corrupted (verified with diff)
+  - [x] Idempotency verified (only 1 occurrence of each directive after 2 integrations)
+  - [x] Rollback works correctly (files restored to backup state)
+
+### T025: Update Documentation and Version ✅
+- [x] Update CHANGELOG.md:
+  - [x] Add v0.1.1 section with bug fix notes
+  - [x] Document Spec Kit v0.0.55 compatibility fix
+  - [x] Note: Integration now works with YAML frontmatter format
+- [x] Update pyproject.toml:
+  - [x] Bump version to 0.1.1
+- [x] Update src/pantheon/__init__.py:
+  - [x] Bump __version__ to 0.1.1
+- [x] Update README.md if needed:
+  - [x] Verify installation instructions still accurate
+  - [x] Add note about Spec Kit v0.0.55+ compatibility
+  - [x] Update test count to 27 tests, 92% coverage
+- [x] Verification: Documentation reflects changes
+- **Dependencies**: T024
+- **Quality Standards**:
+  - [x] Version bumped to 0.1.1 in pyproject.toml and __init__.py
+  - [x] CHANGELOG accurate and complete
+  - [x] README up to date
+  - [x] All docs render correctly
+  - [x] Package builds successfully (pantheon_agents-0.1.1.tar.gz, pantheon_agents-0.1.1-py3-none-any.whl)
+  - [x] All 27 tests pass
+  - [x] 0 lint errors (ruff)
+  - [x] 0 type errors (mypy)
+
+---
+
 ## Success Criteria ✅
 
 All success criteria have been met:
@@ -386,12 +479,13 @@ All success criteria have been met:
 - ✅ `pantheon list` shows available agents
 - ✅ DEV agent has valid YAML frontmatter
 - ✅ Integration directives match design specification
-- ✅ All tests pass (25 tests, 91% coverage on spec_kit.py)
+- ✅ All tests pass (27 tests, 92% coverage on spec_kit.py)
 - ✅ Code quality: 0 lint errors (ruff), 0 type errors (mypy)
 - ✅ Documentation complete and accurate
-- ✅ Package builds and installs correctly
+- ✅ Package builds and installs correctly (v0.1.1)
 - ✅ End-to-end workflow validated in fresh test project
 - ✅ Idempotency verified (no duplicate integrations)
+- ✅ Spec Kit v0.0.55+ compatibility verified
 
 ---
 
@@ -430,10 +524,18 @@ All success criteria have been met:
 
 ### Phase 7: Documentation & Distribution
 - **README**: Comprehensive with examples, architecture, and troubleshooting
-- **CHANGELOG**: Semantic versioning with detailed v0.1.0 notes
+- **CHANGELOG**: Semantic versioning with detailed v0.1.0 and v0.1.1 notes
 - **LICENSE**: MIT for maximum compatibility
 - **Examples**: Created `examples/` with Spec Kit integration guide
 - **Build Test**: Verified package builds and CLI works after install
+
+### Phase 9: Bug Fix - Spec Kit v0.0.55 Compatibility
+- **Issue**: Integration failed with Spec Kit v0.0.55 due to YAML frontmatter format
+- **Root Cause**: Integration logic expected markdown headings (`#`), but v0.0.55 uses YAML frontmatter
+- **Solution**: Updated integration functions to detect frontmatter and insert after closing `---`
+- **Fallback**: Handles files without frontmatter gracefully
+- **Testing**: Added edge case tests, verified with real Spec Kit v0.0.55 installation
+- **Version**: Bumped to 0.1.1 with comprehensive changelog
 
 ### Key Learnings
 

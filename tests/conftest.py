@@ -34,8 +34,40 @@ def mock_specify_dir(temp_dir: Path) -> Path:
 
 @pytest.fixture
 def mock_spec_kit_project(mock_claude_dir: Path, mock_specify_dir: Path) -> Path:
-    """Create a complete mock Spec Kit project."""
-    # Create sample command files
+    """Create a complete mock Spec Kit project with YAML frontmatter."""
+    # Create sample command files matching Spec Kit v0.0.55 format
+    commands_dir = mock_claude_dir / "commands"
+
+    (commands_dir / "implement.md").write_text(
+        "---\n"
+        "description: Execute the implementation plan by processing tasks\n"
+        "---\n\n"
+        "Execute the implementation plan by processing tasks.\n"
+    )
+
+    (commands_dir / "plan.md").write_text(
+        "---\n"
+        "description: Create a detailed implementation plan\n"
+        "---\n\n"
+        "Create a detailed implementation plan.\n"
+    )
+
+    (commands_dir / "tasks.md").write_text(
+        "---\n"
+        "description: Generate actionable tasks\n"
+        "---\n\n"
+        "Generate actionable tasks.\n"
+    )
+
+    return mock_claude_dir.parent
+
+
+@pytest.fixture
+def mock_spec_kit_project_no_frontmatter(
+    mock_claude_dir: Path, mock_specify_dir: Path
+) -> Path:
+    """Create a mock Spec Kit project without YAML frontmatter (legacy format)."""
+    # Create sample command files without frontmatter
     commands_dir = mock_claude_dir / "commands"
 
     (commands_dir / "implement.md").write_text(
@@ -49,8 +81,7 @@ def mock_spec_kit_project(mock_claude_dir: Path, mock_specify_dir: Path) -> Path
     )
 
     (commands_dir / "tasks.md").write_text(
-        "# /tasks - Generate Task List\n\n"
-        "Generate actionable tasks.\n"
+        "# /tasks - Generate Task List\n\n" "Generate actionable tasks.\n"
     )
 
     return mock_claude_dir.parent

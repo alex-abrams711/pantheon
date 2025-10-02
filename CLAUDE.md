@@ -4,9 +4,10 @@
 
 ALWAYS read through the following files and present your understanding, at the beginning of every new conversation:
 
-- agents/dev.md
+- README.md
 - docs/research.md
 - docs/design.md
+- tasks.md
 
 NEVER access the docs/archive directory.
 

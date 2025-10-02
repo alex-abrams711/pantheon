@@ -175,3 +175,70 @@ class TestBackupManagement:
         for file in required_files:
             assert (backup_dir / file).exists()
             assert (backup_dir / file).stat().st_size > 0
+
+
+class TestEdgeCases:
+    """Test edge cases and special scenarios."""
+
+    def test_integration_without_frontmatter(
+        self, mock_spec_kit_project_no_frontmatter: Path
+    ):
+        """Test integration works with files that have no YAML frontmatter."""
+        os.chdir(mock_spec_kit_project_no_frontmatter)
+
+        # Setup dev agent
+        dst_agent = Path(".claude/agents/dev.md")
+        dst_agent.write_text(
+            "---\nname: DEV\ndescription: Test\nmodel: claude-sonnet-4-5\n---\n# DEV"
+        )
+
+        # Integrate
+        result = integrate_spec_kit()
+
+        # Should succeed
+        assert result["success"] is True
+
+        # Verify directives added at beginning of file
+        implement_content = Path(".claude/commands/implement.md").read_text()
+        assert "## Agent Integration" in implement_content
+
+        # Verify original content preserved
+        assert "Execute the implementation plan" in implement_content
+
+    def test_integration_with_malformed_frontmatter(
+        self, mock_claude_dir: Path, mock_specify_dir: Path
+    ):
+        """Test integration handles malformed YAML frontmatter gracefully."""
+        project_root = mock_claude_dir.parent
+        os.chdir(project_root)
+
+        # Setup dev agent
+        dst_agent = Path(".claude/agents/dev.md")
+        dst_agent.write_text(
+            "---\nname: DEV\ndescription: Test\nmodel: claude-sonnet-4-5\n---\n# DEV"
+        )
+
+        # Create command file with malformed frontmatter (missing closing ---)
+        commands_dir = mock_claude_dir / "commands"
+        (commands_dir / "implement.md").write_text(
+            "---\n"
+            "description: Execute the implementation plan\n"
+            "This is malformed - no closing ---\n\n"
+            "Execute the implementation plan.\n"
+        )
+        (commands_dir / "plan.md").write_text(
+            "---\ndescription: Plan\n---\n\nCreate plan.\n"
+        )
+        (commands_dir / "tasks.md").write_text(
+            "---\ndescription: Tasks\n---\n\nCreate tasks.\n"
+        )
+
+        # Integrate (should handle malformed frontmatter by inserting at beginning)
+        result = integrate_spec_kit()
+
+        # Should succeed (fallback to beginning of file)
+        assert result["success"] is True
+
+        # Verify directive added
+        implement_content = Path(".claude/commands/implement.md").read_text()
+        assert "## Agent Integration" in implement_content

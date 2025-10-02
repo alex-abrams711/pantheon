@@ -145,7 +145,7 @@ class TestRestoreFiles:
         # Verify restoration
         restored_content = (commands_dir / "implement.md").read_text()
         assert "MODIFIED" not in restored_content
-        assert "Execute Implementation Plan" in restored_content
+        assert "Execute the implementation plan by processing tasks" in restored_content
 
     def test_restore_missing_backup(self, temp_dir: Path):
         """Test restore with missing backup directory."""
