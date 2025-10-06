@@ -164,7 +164,9 @@ def validate_integration(project_root: Optional[Path] = None) -> ValidationResul
 # Integration directives to be inserted into Spec Kit commands
 IMPLEMENT_DIRECTIVE = """## Agent Integration
 
-**DEV Agent**: All task execution is delegated to the DEV sub-agent.
+**Multi-Agent Workflow**: Task execution uses DEV and QA agents with quality gates.
+
+### DEV Agent Delegation
 
 When executing tasks:
 1. For each task in tasks.md, prepare a context package containing:
@@ -186,9 +188,48 @@ When executing tasks:
    - If success: mark task complete, log decisions, continue
    - If failure: halt, report status, wait for user
 
-4. At phase boundaries: create sequential commits for completed tasks
+### Parallel Execution
 
-See `.claude/agents/dev.md` for DEV's methodology and workflow.
+For tasks marked [P] in tasks.md (parallel-safe):
+- Invoke up to 3 DEV agents simultaneously in a SINGLE message
+- Use multiple Task tool calls in one message
+- Wait for all agents to complete before proceeding
+- Example:
+  ```
+  Use the DEV agent to implement T001: [description]
+  Use the DEV agent to implement T002: [description]
+  Use the DEV agent to implement T003: [description]
+  ```
+
+### QA Validation
+
+After completing a batch of related tasks:
+1. Prepare QA context package containing:
+   - List of completed task IDs
+   - Quality standards from plan.md
+   - Definition of Done checklist
+   - Manual testing requirements (if functional changes)
+
+2. Invoke QA sub-agent using Task tool:
+   ```
+   Use Task tool:
+     subagent_type: "qa"
+     description: "Validate batch: [Task IDs]"
+     prompt: [QA context package from above]
+   ```
+
+3. Process QA report:
+   - If PASS: create commits for validated tasks
+   - If FAIL: reinvoke DEV agents to fix issues, then re-validate
+
+### Commit Strategy
+
+- Commits created ONLY after QA PASS
+- Orchestrator creates commits (DEV/QA agents do NOT commit)
+- Atomic commits per task or logical batch
+- Include task IDs and quality metrics in commit message
+
+See `.claude/agents/dev.md` and `.claude/agents/qa.md` for agent workflows.
 
 ---
 """

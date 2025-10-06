@@ -5,6 +5,84 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2025-10-06
+
+### Added
+- **QA Agent**: New validation-only agent for quality verification
+  - Runs automated checks (tests, coverage, lint, type)
+  - Performs manual testing for functional changes
+  - Generates structured PASS/FAIL reports
+  - Never modifies code (validation only)
+- **Quality Discovery System**: Auto-detects project type and quality commands
+  - Supports Python, Node.js, Go, Ruby
+  - Parses commands from plan.md or auto-discovers
+  - Generates `.pantheon/quality-config.json`
+  - Module: `pantheon.quality.discovery`, `pantheon.quality.config`
+- **Quality Gate Hooks**: Three validation hooks for Claude Code
+  - **SubagentStop**: Validates DEV work before completion
+  - **PreCommit**: Validates quality before git commits
+  - **PhaseGate**: Validates quality at phase boundaries
+  - Scripts in `.pantheon/hooks/` with execute permissions
+  - Auto-configured in `.claude/settings.json`
+- **Parallel Execution Support**: Run up to 3 DEV agents simultaneously
+  - Tasks marked `[P]` in tasks.md can execute in parallel
+  - Orchestrator invokes multiple agents in single message
+  - Updated `/implement` directive with parallel execution guidance
+- **Multi-Agent Orchestration Guide**: Added to `CLAUDE.md`
+  - DEV agent context package format
+  - QA agent context package format
+  - Parallel execution strategy
+  - Commit strategy (orchestrator only, after QA PASS)
+
+### Changed
+- **CLI `integrate` command**: Now installs hooks and QA integration
+  - Calls `install_hooks()` after Spec Kit integration
+  - Reports hook installation status with validation
+  - Shows warnings if hooks partially installed
+- **CLI `rollback` command**: Now uninstalls hooks
+  - Calls `uninstall_hooks()` during rollback
+  - Preserves `.pantheon/quality-config.json`
+  - Reports hook removal status
+- **`/implement` directive**: Enhanced with QA validation workflow
+  - Includes QA agent delegation section
+  - Parallel execution examples
+  - Commit strategy (only after QA PASS)
+  - Rework cycle guidance (DEV fixes, QA re-validates)
+- **DEV agent spec**: Updated to v2.0 with quality hooks awareness
+  - References quality-config.json for commands
+  - SubagentStop hook documentation
+  - Workflow enhancements for multi-agent coordination
+
+### Technical
+- **New Modules**:
+  - `src/pantheon/quality/discovery.py` - Quality command discovery
+  - `src/pantheon/quality/config.py` - Config generation and loading
+  - `src/pantheon/integrations/hooks.py` - Hook installation management
+  - `src/pantheon/hooks/` - Hook scripts (bash)
+  - `src/pantheon/agents/qa.md` - QA agent specification
+- **Tests**: Expanded from 27 to 109 tests (92% coverage maintained)
+  - 42 contract tests for quality discovery, config, hooks
+  - 26 integration tests (E2E workflows)
+  - 41 unit tests for Spec Kit integration
+- **Type Safety**: Added `py.typed` marker to quality module
+- **Hook Scripts**: Bash scripts with proper shebangs and error handling
+
+### Documentation
+- Updated README.md with v0.2.0 features
+  - Quality discovery section with examples
+  - Multi-agent workflow section
+  - Parallel execution examples
+  - Hook system documentation
+  - Updated test counts (109 tests)
+- Added CHANGELOG.md entry for v0.2.0
+- Updated CLAUDE.md with orchestration guide
+
+### Quality Metrics
+- **Tests**: 109/109 passing (83 unit/contract + 26 integration)
+- **Coverage**: 92% on core modules
+- **Type Checking**: 0 errors (mypy strict mode)
+- **Linting**: 0 errors (ruff)
+
 ## [0.1.1] - 2025-10-01
 
 ### Fixed
@@ -65,5 +143,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Development setup guide
 - Contributing guidelines
 
+[0.2.0]: https://github.com/alex-abrams711/pantheon/releases/tag/v0.2.0
 [0.1.1]: https://github.com/alex-abrams711/pantheon/releases/tag/v0.1.1
 [0.1.0]: https://github.com/alex-abrams711/pantheon/releases/tag/v0.1.0

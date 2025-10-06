@@ -45,7 +45,7 @@
 
 ## Phase 3.1: Setup
 
-- [ ] **T001** Create project structure for v0.2.0 modules
+- [x] **T001** Create project structure for v0.2.0 modules
   - Create `src/pantheon/quality/` directory
   - Create `src/pantheon/hooks/` directory
   - Create `tests/unit/` subdirectories for new modules
@@ -59,7 +59,7 @@
 ## Phase 3.2: Tests First (TDD) ⚠️ MUST COMPLETE BEFORE 3.3
 **CRITICAL: These tests MUST be written and MUST FAIL before ANY implementation**
 
-- [ ] **T002** [P] Contract tests for quality discovery API in `tests/contract/test_quality_discovery.py`
+- [x] **T002** [P] Contract tests for quality discovery API in `tests/contract/test_quality_discovery.py`
   - Implement all test cases from `contracts/quality-discovery-api.md`
   - Test `discover_quality_commands()` with plan.md, Node.js, Python, Go projects
   - Test `detect_project_type()` for all supported types
@@ -68,7 +68,7 @@
   - **Files**: `tests/contract/test_quality_discovery.py`
   - **Dependencies**: T001
 
-- [ ] **T003** [P] Contract tests for quality config API in `tests/contract/test_quality_config.py`
+- [x] **T003** [P] Contract tests for quality config API in `tests/contract/test_quality_config.py`
   - Implement all test cases from `contracts/quality-config-api.md`
   - Test `generate_quality_config()` creates directory, valid JSON, threshold validation
   - Test `load_quality_config()` success and error cases
@@ -77,7 +77,7 @@
   - **Files**: `tests/contract/test_quality_config.py`
   - **Dependencies**: T001
 
-- [ ] **T004** [P] Contract tests for hook installation API in `tests/contract/test_hook_installation.py`
+- [x] **T004** [P] Contract tests for hook installation API in `tests/contract/test_hook_installation.py`
   - Implement all test cases from `contracts/hook-installation-api.md`
   - Test `install_hooks()` creates directory, copies scripts, makes executable, updates settings.json
   - Test `uninstall_hooks()` removes entries, deletes directory, preserves config
@@ -90,7 +90,7 @@
 
 ## Phase 3.3: Core Implementation (ONLY after tests are failing)
 
-- [ ] **T005** Implement quality discovery module in `src/pantheon/quality/discovery.py`
+- [x] **T005** Implement quality discovery module in `src/pantheon/quality/discovery.py`
   - Implement `discover_quality_commands(project_root, plan_path)` function
   - Implement `detect_project_type(project_root)` function
   - Implement `parse_plan_quality_commands(plan_path)` function
@@ -99,7 +99,7 @@
   - **Files**: `src/pantheon/quality/discovery.py`, `src/pantheon/quality/__init__.py`
   - **Dependencies**: T002 (tests must exist and fail first)
 
-- [ ] **T006** Implement quality config module in `src/pantheon/quality/config.py`
+- [x] **T006** Implement quality config module in `src/pantheon/quality/config.py`
   - Implement `generate_quality_config(project_root, plan_path, coverage_threshold)` function
   - Implement `load_quality_config(project_root)` function
   - Implement `validate_quality_config(config)` function
@@ -108,7 +108,7 @@
   - **Files**: `src/pantheon/quality/config.py`
   - **Dependencies**: T003, T005 (tests exist, discovery implemented)
 
-- [ ] **T007** Implement hook installation module in `src/pantheon/integrations/hooks.py`
+- [x] **T007** Implement hook installation module in `src/pantheon/integrations/hooks.py`
   - Implement `install_hooks(project_root)` function
   - Implement `uninstall_hooks(project_root)` function
   - Implement `validate_hook_installation(project_root)` function
@@ -122,7 +122,7 @@
 
 ## Phase 3.4: Hook Scripts
 
-- [ ] **T008** [P] Create SubagentStop hook script in `src/pantheon/hooks/subagent-validation.sh`
+- [x] **T008** [P] Create SubagentStop hook script in `src/pantheon/hooks/subagent-validation.sh`
   - Read quality config from `.pantheon/quality-config.json`
   - Validate DEV agents: tests pass, lint pass, type-check pass, no code smells
   - Validate QA agents: all quality checks executed, results files exist
@@ -131,7 +131,7 @@
   - **Files**: `src/pantheon/hooks/subagent-validation.sh`
   - **Dependencies**: T006 (quality config structure defined)
 
-- [ ] **T009** [P] Create PreCommit hook script in `src/pantheon/hooks/pre-commit-gate.sh`
+- [x] **T009** [P] Create PreCommit hook script in `src/pantheon/hooks/pre-commit-gate.sh`
   - Read quality config from `.pantheon/quality-config.json`
   - Run tests, lint, type-check from config
   - Exit 0 if all pass, exit 2 if any fail
@@ -139,7 +139,7 @@
   - **Files**: `src/pantheon/hooks/pre-commit-gate.sh`
   - **Dependencies**: T006 (quality config structure defined)
 
-- [ ] **T010** [P] Create Phase Gate hook script in `src/pantheon/hooks/phase-gate.sh`
+- [x] **T010** [P] Create Phase Gate hook script in `src/pantheon/hooks/phase-gate.sh`
   - Read user message from stdin
   - Detect approval keywords (yes, proceed, phase N)
   - If approval detected, run quality validation
@@ -151,7 +151,7 @@
 
 ## Phase 3.5: Agent Updates
 
-- [ ] **T011** Update DEV agent specification in `src/pantheon/agents/dev.md`
+- [x] **T011** Update DEV agent specification in `src/pantheon/agents/dev.md`
   - Version the existing `src/pantheon/agents/dev.md` document as `src/pantheon/agents/dev-v1.md`
   - Copy over `src/pantheon/agents/dev.md` as a new version to be updated
   - Remove commit logic from Phase 5 (orchestrator handles commits)
@@ -162,7 +162,7 @@
   - **Files**: `src/pantheon/agents/dev.md`
   - **Dependencies**: None (agent update, no code dependencies)
 
-- [ ] **T012** Create QA agent specification in `src/pantheon/agents/qa.md`
+- [x] **T012** Create QA agent specification in `src/pantheon/agents/qa.md`
   - Create YAML frontmatter (name, description, model, tools)
   - Define Core Principles (validation-only, no code modification)
   - Document Context Package format (from data-model.md)
@@ -176,7 +176,7 @@
 
 ## Phase 3.6: Integration
 
-- [ ] **T013** Update CLI integrate command in `src/pantheon/cli.py`
+- [x] **T013** Update CLI integrate command in `src/pantheon/cli.py`
   - Add hook installation to `integrate` command using `hooks.install_hooks()`
   - Add hook validation reporting
   - Add error handling for hook installation failures
@@ -184,7 +184,7 @@
   - **Files**: `src/pantheon/cli.py`
   - **Dependencies**: T007 (hook installation module exists)
 
-- [ ] **T014** Update /implement integration directive (minimal change)
+- [x] **T014** Update /implement integration directive (minimal change)
   - Read existing `.claude/commands/implement.md` (if user has Spec Kit)
   - Update "## Agent Integration" section with QA agent delegation
   - Add parallel execution guidance (single message, multiple Task tools)
@@ -192,7 +192,7 @@
   - **Files**: Updates to Spec Kit integration in `src/pantheon/integrations/spec_kit.py`
   - **Dependencies**: T012 (QA agent spec exists)
 
-- [ ] **T015** Add multi-agent workflow orchestration guide to `CLAUDE.md`
+- [x] **T015** Add multi-agent workflow orchestration guide to `CLAUDE.md`
   - Document parallel execution strategy (max 3 DEV agents, single message)
   - Document QA validation workflow (when to invoke, context package format)
   - Document phase gate procedures (checkpoints, validation)
@@ -206,7 +206,7 @@
 
 ## Phase 3.7: Integration Tests
 
-- [ ] **T016** [P] End-to-end quality discovery test in `tests/integration/test_quality_discovery_e2e.py`
+- [x] **T016** [P] End-to-end quality discovery test in `tests/integration/test_quality_discovery_e2e.py`
   - Create temp project with different structures (Node.js, Python, Go)
   - Test discovery with plan.md explicit commands
   - Test auto-discovery without plan.md
@@ -214,7 +214,7 @@
   - **Files**: `tests/integration/test_quality_discovery_e2e.py`
   - **Dependencies**: T005, T006 (discovery and config implemented)
 
-- [ ] **T017** [P] End-to-end hook installation test in `tests/integration/test_hook_installation_e2e.py`
+- [x] **T017** [P] End-to-end hook installation test in `tests/integration/test_hook_installation_e2e.py`
   - Create temp project with .claude/ directory
   - Test full install workflow
   - Validate hooks are executable
@@ -223,7 +223,7 @@
   - **Files**: `tests/integration/test_hook_installation_e2e.py`
   - **Dependencies**: T007, T008, T009, T010 (hooks module and scripts exist)
 
-- [ ] **T018** [P] End-to-end QA workflow test in `tests/integration/test_qa_workflow_e2e.py`
+- [x] **T018** [P] End-to-end QA workflow test in `tests/integration/test_qa_workflow_e2e.py`
   - Simulate orchestrator invoking QA agent (from quickstart.md)
   - Provide QA context package
   - Validate QA report structure
@@ -236,7 +236,7 @@
 
 ## Phase 3.8: Polish
 
-- [ ] **T019** [P] Update documentation for v0.2.0
+- [x] **T019** [P] Update documentation for v0.2.0
   - Update `README.md` with QA agent, parallel execution, hooks
   - Add section on quality discovery
   - Update examples to show multi-agent workflow

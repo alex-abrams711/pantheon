@@ -2,15 +2,18 @@
 
 A quality-focused agents library for Claude Code with seamless Spec Kit integration.
 
-Pantheon provides production-ready agents that implement structured, quality-first development workflows. The DEV agent ensures every implementation includes proper testing, quality verification, and atomic commits.
+Pantheon provides production-ready agents that implement structured, quality-first development workflows. The DEV agent ensures every implementation includes proper testing, quality verification, and atomic commits. The QA agent validates all changes before commits are created.
 
 ## Features
 
-- 🎯 **Quality-First Workflow**: Built-in verification loops for acceptance criteria and quality standards
+- 🎯 **Multi-Agent Quality Workflow**: DEV + QA agents with built-in validation loops
+- 🔍 **Auto Quality Discovery**: Detects project type and discovers test/lint/type commands
+- 🪝 **Quality Gate Hooks**: SubagentStop, PreCommit, and PhaseGate validation
+- ⚡ **Parallel Execution**: Run up to 3 DEV agents simultaneously for independent tasks
 - 🔧 **Spec Kit Integration**: Seamless integration with GitHub's Spec Kit framework
 - 🔄 **Safe Rollback**: Automatic backups and easy rollback capability
 - 📦 **Simple Distribution**: Install via `uvx` - no configuration needed
-- ✅ **Comprehensive Testing**: 27 tests with 92% coverage on core functionality
+- ✅ **Comprehensive Testing**: 109 tests with 92% coverage on core functionality
 
 ## Quick Start
 
@@ -49,13 +52,16 @@ This creates `.claude/agents/dev.md` in your project.
 
 #### 2. Integrate with Spec Kit (Optional)
 
-If you have Spec Kit installed, integrate DEV agent with your commands:
+If you have Spec Kit installed, integrate DEV + QA agents and install quality hooks:
 
 ```bash
 pantheon integrate
 ```
 
-This adds minimal directives to `/implement`, `/plan`, and `/tasks` commands.
+This:
+- Adds minimal directives to `/implement`, `/plan`, and `/tasks` commands
+- Installs quality gate hooks (SubagentStop, PreCommit, PhaseGate)
+- Updates `.claude/settings.json` with hook configuration
 
 #### 3. Use DEV Agent
 
@@ -92,7 +98,7 @@ pantheon init --auto-integrate
 
 ### `pantheon integrate`
 
-Integrate DEV agent with Spec Kit commands.
+Integrate DEV + QA agents with Spec Kit commands and install quality hooks.
 
 **Options:**
 - `--dry-run` - Preview changes without applying them
@@ -100,6 +106,8 @@ Integrate DEV agent with Spec Kit commands.
 **What it does:**
 - Creates timestamped backup of command files
 - Adds integration directives to `/implement`, `/plan`, `/tasks`
+- Installs quality gate hooks in `.pantheon/hooks/`
+- Updates `.claude/settings.json` with hook paths
 - Validates integration success
 
 **Example:**
@@ -110,7 +118,7 @@ pantheon integrate            # Apply integration
 
 ### `pantheon rollback`
 
-Rollback to the most recent backup.
+Rollback to the most recent backup and uninstall quality hooks.
 
 **Options:**
 - `--force` - Skip confirmation prompt
@@ -118,6 +126,9 @@ Rollback to the most recent backup.
 **What it does:**
 - Finds most recent integration backup
 - Restores original command files
+- Removes quality gate hooks from `.pantheon/hooks/`
+- Cleans up `.claude/settings.json`
+- Preserves `.pantheon/quality-config.json`
 - Reports restored files
 
 **Example:**
@@ -133,6 +144,76 @@ List available agents and their installation status.
 ```bash
 pantheon list
 ```
+
+## Quality Discovery
+
+Pantheon automatically discovers quality commands for your project type:
+
+### Supported Project Types
+- **Python**: pytest, ruff, mypy
+- **Node.js**: npm test, eslint, tsc
+- **Go**: go test, golangci-lint
+- **Ruby**: rspec, rubocop
+
+### Discovery Process
+1. Detects project type from files (package.json, pyproject.toml, go.mod)
+2. Extracts commands from plan.md if available
+3. Auto-discovers common commands if plan.md not found
+4. Generates `.pantheon/quality-config.json` with discovered commands
+
+### Example Quality Config
+```json
+{
+  "version": "1.0",
+  "project_type": "python",
+  "commands": {
+    "test": "pytest tests/ -v",
+    "lint": "ruff check src/ tests/",
+    "type_check": "mypy src/ --strict",
+    "coverage": "pytest --cov=src --cov-report=term-missing"
+  },
+  "thresholds": {
+    "coverage_branches": 80
+  },
+  "discovery_source": "plan.md"
+}
+```
+
+## Multi-Agent Workflow
+
+Pantheon uses a two-agent architecture with orchestration:
+
+### DEV Agent
+Implements features with quality-first approach:
+- Writes code and tests
+- Runs quality checks locally
+- Iterates until all checks pass
+- Returns SUCCESS/FAIL to orchestrator
+
+### QA Agent
+Validates completed work before commits:
+- Runs all automated checks (tests, coverage, lint, type)
+- Performs manual testing if functional changes
+- Generates structured PASS/FAIL reports
+- Never modifies code (validation only)
+
+### Parallel Execution
+For independent tasks marked `[P]` in tasks.md:
+- Invoke up to 3 DEV agents in a single message
+- All agents execute simultaneously
+- Orchestrator waits for all completions
+- Example:
+  ```
+  Use DEV agent to implement T001: Add login endpoint
+  Use DEV agent to implement T002: Add logout endpoint
+  Use DEV agent to implement T003: Add password reset
+  ```
+
+### Commit Strategy
+- QA validates batch of completed tasks
+- If QA returns PASS: orchestrator creates commit
+- If QA returns FAIL: DEV agents fix issues, QA re-validates
+- Atomic commits with quality metrics in message
 
 ## DEV Agent Workflow
 
@@ -185,20 +266,24 @@ Task format includes subtasks as acceptance criteria:
 ```
 
 ### `/implement` Enhancement
-Delegates task execution to DEV agent:
-1. Prepares context package (task, requirements, quality standards)
-2. Invokes DEV sub-agent using Task tool
-3. Processes results and marks tasks complete
-4. Creates commits at phase boundaries
+Delegates task execution to DEV and QA agents:
+1. **DEV Execution**: Prepares context package and invokes DEV for each task
+2. **Parallel Support**: Runs up to 3 DEV agents simultaneously for `[P]` tasks
+3. **QA Validation**: Invokes QA agent to validate batch of completed tasks
+4. **Commit on PASS**: Creates commits only after QA returns PASS status
+5. **Rework on FAIL**: Re-invokes DEV to fix issues if QA returns FAIL
 
 ## Architecture
 
 Pantheon uses Claude Code's sub-agent architecture:
 
-- **Separate Context Windows**: DEV operates independently, preserving main conversation
-- **Stateless Invocation**: Each DEV call is fresh, state managed by orchestrator
-- **Tool Scoping**: DEV has only implementation tools (Read, Write, Edit, Bash)
-- **Quality Focus**: Built-in verification loops ensure standards are met
+- **Separate Context Windows**: DEV and QA operate independently, preserving main conversation
+- **Stateless Invocation**: Each agent call is fresh, state managed by orchestrator
+- **Tool Scoping**:
+  - DEV has implementation tools (Read, Write, Edit, Bash)
+  - QA has validation tools (Read, Bash, Glob, Grep, Browser, Playwright)
+- **Quality Focus**: Built-in verification loops and quality gates ensure standards are met
+- **Hook System**: SubagentStop, PreCommit, and PhaseGate hooks validate work automatically
 
 ## Safety & Rollback
 
@@ -260,7 +345,7 @@ ruff check src/ tests/
 - **Test Coverage**: >80% on core modules (currently 92%)
 - **Type Checking**: mypy strict mode, 0 errors
 - **Linting**: ruff with pycodestyle, pyflakes, isort, pep8-naming
-- **All Tests Pass**: 27/27 tests passing
+- **All Tests Pass**: 109/109 tests passing (83 unit/contract + 26 integration)
 
 ## Contributing
 

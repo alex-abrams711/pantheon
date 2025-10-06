@@ -94,11 +94,13 @@ def init(ctx: click.Context, auto_integrate: bool) -> None:
     help="Preview changes without applying them",
 )
 def integrate(dry_run: bool) -> None:
-    """Integrate DEV agent with Spec Kit commands.
+    """Integrate DEV agent with Spec Kit commands and install quality hooks.
 
     Adds minimal integration directives to /implement, /plan, and /tasks
-    commands to enable DEV agent delegation.
+    commands to enable DEV agent delegation. Also installs quality gate hooks
+    for SubagentStop, PreCommit, and Phase Gate validation.
     """
+    from pantheon.integrations.hooks import install_hooks, validate_hook_installation
     from pantheon.integrations.spec_kit import integrate_spec_kit
 
     cwd = Path.cwd()
@@ -130,22 +132,24 @@ def integrate(dry_run: bool) -> None:
         click.echo("  - .claude/commands/implement.md")
         click.echo("  - .claude/commands/plan.md")
         click.echo("  - .claude/commands/tasks.md")
+        click.echo("\nWould install hooks:")
+        click.echo("  - .pantheon/hooks/subagent-validation.sh")
+        click.echo("  - .pantheon/hooks/pre-commit-gate.sh")
+        click.echo("  - .pantheon/hooks/phase-gate.sh")
+        click.echo("  - Update .claude/settings.json")
         return
 
-    # Report results
+    # Report Spec Kit integration results
     if result["success"]:
-        click.echo("✅ Integration successful!\n")
+        click.echo("✅ Spec Kit integration successful!\n")
         if result["backup_dir"]:
             backup_path = result["backup_dir"].relative_to(cwd)
             click.echo(f"📦 Backup created: {backup_path}/\n")
         click.echo("Modified files:")
         for filename in result["files_modified"]:
             click.echo(f"  ✓ {filename}")
-
-        click.echo("\n💡 DEV agent is now integrated with Spec Kit")
-        click.echo("   Run /implement to use DEV for task execution")
     else:
-        click.echo("❌ Integration failed!\n")
+        click.echo("❌ Spec Kit integration failed!\n")
         for error in result["errors"]:
             click.echo(f"  • {error}")
 
@@ -153,6 +157,48 @@ def integrate(dry_run: bool) -> None:
             backup_path = result["backup_dir"].relative_to(cwd)
             click.echo(f"\n📦 Backup available at: {backup_path}/")
             click.echo("   Run 'pantheon rollback' to restore")
+        return
+
+    # Install quality hooks
+    click.echo("\nInstalling quality gate hooks...\n")
+    try:
+        hook_results = install_hooks(cwd)
+
+        # Validate installation
+        validation = validate_hook_installation(cwd)
+
+        # Report hook installation
+        all_hooks_ok = all(status == "OK" for status in validation.values())
+
+        if all_hooks_ok:
+            click.echo("✅ Quality hooks installed successfully!\n")
+            click.echo("Installed hooks:")
+            for hook_name in hook_results.keys():
+                click.echo(f"  ✓ {hook_name}")
+
+            click.echo("\n💡 DEV agent is now integrated with Spec Kit")
+            click.echo("   Quality hooks will validate work automatically")
+            click.echo("   Run /implement to use DEV for task execution")
+        else:
+            click.echo("⚠️  Quality hooks installed with warnings:\n")
+            for hook_name, status in validation.items():
+                if status == "OK":
+                    click.echo(f"  ✓ {hook_name}: {status}")
+                else:
+                    click.echo(f"  ⚠ {hook_name}: {status}")
+
+    except FileNotFoundError as e:
+        click.echo(f"❌ Hook installation failed: {e}")
+        click.echo(
+            "\n💡 Spec Kit integration completed, "
+            "but hooks could not be installed"
+        )
+    except PermissionError as e:
+        click.echo(f"❌ Hook installation failed: {e}")
+        click.echo(
+            "\n💡 Spec Kit integration completed, "
+            "but hooks could not be installed"
+        )
 
 
 @main.command()
@@ -162,10 +208,12 @@ def integrate(dry_run: bool) -> None:
     help="Skip confirmation prompt",
 )
 def rollback(force: bool) -> None:
-    """Rollback to the most recent backup.
+    """Rollback to the most recent backup and uninstall quality hooks.
 
-    Restores Spec Kit command files from the most recent integration backup.
+    Restores Spec Kit command files from the most recent integration backup
+    and removes quality gate hooks.
     """
+    from pantheon.integrations.hooks import uninstall_hooks
     from pantheon.integrations.spec_kit import find_latest_backup, rollback_integration
 
     cwd = Path.cwd()
@@ -183,10 +231,15 @@ def rollback(force: bool) -> None:
     for backup_file in backup_dir.glob("*.md"):
         click.echo(f"  • {backup_file.name}")
 
+    click.echo("\nHooks to remove:")
+    click.echo("  • SubagentStop")
+    click.echo("  • PreCommit")
+    click.echo("  • PhaseGate")
+
     # Confirm unless --force
     if not force:
         click.echo()
-        if not click.confirm("Restore these files from backup?"):
+        if not click.confirm("Restore files and remove hooks?"):
             click.echo("Rollback cancelled.")
             return
 
@@ -195,7 +248,7 @@ def rollback(force: bool) -> None:
     result = rollback_integration(cwd)
 
     if result["success"]:
-        click.echo("✅ Rollback successful!\n")
+        click.echo("✅ Spec Kit rollback successful!\n")
         click.echo("Restored files:")
         for filename in result["files_restored"]:
             click.echo(f"  ✓ {filename}")
@@ -203,9 +256,20 @@ def rollback(force: bool) -> None:
             backup_path = result["backup_dir"].relative_to(cwd)
             click.echo(f"\n📦 Backup used: {backup_path}/")
     else:
-        click.echo("❌ Rollback failed!\n")
+        click.echo("❌ Spec Kit rollback failed!\n")
         for error in result["errors"]:
             click.echo(f"  • {error}")
+        return
+
+    # Uninstall hooks
+    click.echo("\nRemoving quality hooks...\n")
+    try:
+        if uninstall_hooks(cwd):
+            click.echo("✅ Quality hooks removed successfully!")
+        else:
+            click.echo("⚠️  Some hooks could not be removed")
+    except FileNotFoundError:
+        click.echo("⚠️  No .claude/ directory found - hooks already removed?")
 
 
 @main.command()
