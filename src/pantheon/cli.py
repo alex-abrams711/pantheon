@@ -26,7 +26,8 @@ def main(ctx: click.Context) -> None:
     is_flag=True,
     help="Automatically integrate with Spec Kit if detected (skip prompt)",
 )
-def init(auto_integrate: bool) -> None:
+@click.pass_context
+def init(ctx: click.Context, auto_integrate: bool) -> None:
     """Initialize Pantheon agents in your project.
 
     This command:
@@ -80,10 +81,8 @@ def init(auto_integrate: bool) -> None:
             )
 
         if should_integrate:
-            click.echo(
-                "\n💡 Run 'pantheon integrate' to add DEV agent "
-                "integration to Spec Kit commands."
-            )
+            click.echo("")
+            ctx.invoke(integrate, dry_run=False)
 
     click.echo("\n✅ Initialization complete!")
 

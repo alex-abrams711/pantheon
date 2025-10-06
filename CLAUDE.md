@@ -47,6 +47,7 @@ NEVER access the docs/archive directory.
 
 - Github - Useful for working with GitHub. Available tools include those related to repos, issues, and pull_requests
 - Browser - Useful for accessing the browser - great for manually testing front ends
+- Playwright - Useful for manually testing the application
 - Context7 - Comprehensive documentation for hundreds of different services, libraries, frameworks - use this when you need to research service, libraries, or frameworks
 - SequentialThinking - Enhanced thinking capabilities - use when we need to think through complex problems
 - Brave-Search - Enhanced web search - use this when you need to research topics that you don't natively understand - especially helpful for understanding best practices for working with specific tech stacks
