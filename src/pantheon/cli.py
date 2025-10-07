@@ -32,7 +32,7 @@ def init(ctx: click.Context, auto_integrate: bool) -> None:
 
     This command:
     - Creates .claude/agents/ directory
-    - Copies DEV agent to your project
+    - Copies DEV and QA agents to your project
     - Detects Spec Kit and offers integration
     """
     cwd = Path.cwd()
@@ -53,16 +53,20 @@ def init(ctx: click.Context, auto_integrate: bool) -> None:
     else:
         click.echo(f"✓ Found {agents_dir.relative_to(cwd)}/")
 
-    # Step 3: Copy DEV agent
+    # Step 3: Copy agents (DEV + QA)
     package_agents_dir = Path(__file__).parent / "agents"
-    dev_agent_source = package_agents_dir / "dev.md"
-    dev_agent_dest = agents_dir / "dev.md"
+    agents_to_copy = ["dev.md", "qa.md"]
 
-    if dev_agent_dest.exists():
-        click.echo(f"⚠ {dev_agent_dest.relative_to(cwd)} already exists (skipping)")
-    else:
-        shutil.copy2(dev_agent_source, dev_agent_dest)
-        click.echo(f"✓ Copied DEV agent to {dev_agent_dest.relative_to(cwd)}")
+    for agent_file in agents_to_copy:
+        agent_source = package_agents_dir / agent_file
+        agent_dest = agents_dir / agent_file
+
+        if agent_dest.exists():
+            click.echo(f"⚠ {agent_dest.relative_to(cwd)} already exists (skipping)")
+        else:
+            shutil.copy2(agent_source, agent_dest)
+            agent_name = agent_file.replace(".md", "").upper()
+            click.echo(f"✓ Copied {agent_name} agent to {agent_dest.relative_to(cwd)}")
 
     # Step 4: Detect Spec Kit
     specify_dir = cwd / ".specify"

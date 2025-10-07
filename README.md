@@ -42,13 +42,13 @@ pantheon init
 
 #### 1. Initialize Agents
 
-Copy the DEV agent to your project:
+Copy the DEV and QA agents to your project:
 
 ```bash
 pantheon init
 ```
 
-This creates `.claude/agents/dev.md` in your project.
+This creates `.claude/agents/dev.md` and `.claude/agents/qa.md` in your project.
 
 #### 2. Integrate with Spec Kit (Optional)
 
@@ -88,7 +88,7 @@ Initialize Pantheon agents in your project.
 
 **What it does:**
 - Creates `.claude/agents/` directory
-- Copies DEV agent to your project
+- Copies DEV and QA agents to your project
 - Detects Spec Kit and offers integration
 
 **Example:**
