@@ -5,8 +5,14 @@ This example demonstrates integrating Pantheon's DEV agent with an existing Spec
 ## Prerequisites
 
 - Python 3.9+
-- Spec Kit installed in your project
+- Spec Kit v0.0.55+ installed in your project
 - Claude Code
+
+**Note:** Pantheon supports both Spec Kit command formats:
+- Pre-v0.0.57: `implement.md`, `plan.md`, `tasks.md`
+- v0.0.57+: `speckit.implement.md`, `speckit.plan.md`, `speckit.tasks.md`
+
+Format detection is automatic.
 
 ## Step-by-Step Guide
 
@@ -51,12 +57,13 @@ pantheon integrate
 ```
 
 This will:
-1. Create a timestamped backup of your command files
-2. Add integration directives to:
-   - `.claude/commands/implement.md`
-   - `.claude/commands/plan.md`
-   - `.claude/commands/tasks.md`
-3. Validate the integration
+1. Detect your Spec Kit version (automatic format detection)
+2. Create a timestamped backup of your command files
+3. Add integration directives to your Spec Kit commands:
+   - `/implement` (or `/speckit.implement` for v0.0.57+)
+   - `/plan` (or `/speckit.plan` for v0.0.57+)
+   - `/tasks` (or `/speckit.tasks` for v0.0.57+)
+4. Validate the integration
 
 ### 4. Review Changes (Optional)
 
@@ -71,10 +78,10 @@ Output:
 🔍 Dry run mode - no changes will be made
 
 Would create backup directory
-Would modify:
-  - .claude/commands/implement.md
-  - .claude/commands/plan.md
-  - .claude/commands/tasks.md
+Would modify (format depends on your Spec Kit version):
+  - .claude/commands/speckit.implement.md  (or implement.md for pre-v0.0.57)
+  - .claude/commands/speckit.plan.md       (or plan.md for pre-v0.0.57)
+  - .claude/commands/speckit.tasks.md      (or tasks.md for pre-v0.0.57)
 ```
 
 ### 5. Use the Enhanced Workflow
@@ -217,21 +224,23 @@ pantheon rollback --force
 your-project/
 ├── .claude/
 │   ├── agents/
-│   │   └── dev.md                 # DEV agent (from Pantheon)
+│   │   └── dev.md                       # DEV agent (from Pantheon)
 │   └── commands/
-│       ├── implement.md           # Enhanced with DEV delegation
-│       ├── plan.md                # Enhanced with quality standards
-│       ├── tasks.md               # Enhanced with subtask format
-│       ├── specify.md             # Unchanged
+│       ├── speckit.implement.md         # Enhanced with DEV delegation (v0.0.57+)
+│       ├── speckit.plan.md              # Enhanced with quality standards (v0.0.57+)
+│       ├── speckit.tasks.md             # Enhanced with subtask format (v0.0.57+)
+│       │   # OR (for pre-v0.0.57):
+│       │   # implement.md, plan.md, tasks.md
+│       ├── speckit.specify.md           # Unchanged
 │       └── ...other commands
 ├── .specify/
 │   ├── spec.md
 │   ├── plan.md
 │   └── tasks.md
 ├── .integration-backup-20251001-143000/  # Auto-created backup
-│   ├── implement.md
-│   ├── plan.md
-│   └── tasks.md
+│   ├── speckit.implement.md              # (or implement.md for older versions)
+│   ├── speckit.plan.md                   # (or plan.md for older versions)
+│   └── speckit.tasks.md                  # (or tasks.md for older versions)
 └── ...your project files
 ```
 

@@ -1,9 +1,14 @@
-"""Spec Kit integration utilities."""
+"""Spec Kit integration utilities.
+
+Supports both Spec Kit command formats:
+- Pre-v0.0.57: implement.md, plan.md, tasks.md
+- v0.0.57+: speckit.implement.md, speckit.plan.md, speckit.tasks.md
+"""
 
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, TypedDict
+from typing import Literal, Optional, TypedDict
 
 
 class ValidationResult(TypedDict):
@@ -39,6 +44,86 @@ class RollbackResult(TypedDict):
     backup_dir: Optional[Path]
     files_restored: list[str]
     errors: list[str]
+
+
+CommandFormat = Literal["old", "new"]
+
+
+def _detect_command_format(
+    project_root: Optional[Path] = None,
+) -> Optional[CommandFormat]:
+    """Detect which Spec Kit command format is being used.
+
+    Args:
+        project_root: Root directory of the project. Defaults to current directory.
+
+    Returns:
+        "new" for v0.0.57+ format (speckit.*.md),
+        "old" for pre-v0.0.57 format (*.md),
+        None if neither format detected.
+    """
+    if project_root is None:
+        project_root = Path.cwd()
+
+    commands_dir = project_root / ".claude" / "commands"
+
+    if not commands_dir.exists():
+        return None
+
+    # Check for new format (v0.0.57+)
+    new_format_files = [
+        "speckit.implement.md",
+        "speckit.plan.md",
+        "speckit.tasks.md",
+    ]
+    if all((commands_dir / f).exists() for f in new_format_files):
+        return "new"
+
+    # Check for old format (pre-v0.0.57)
+    old_format_files = ["implement.md", "plan.md", "tasks.md"]
+    if any((commands_dir / f).exists() for f in old_format_files):
+        return "old"
+
+    return None
+
+
+def _get_command_files(
+    project_root: Optional[Path] = None,
+) -> dict[str, Path]:
+    """Get command file paths based on detected Spec Kit format.
+
+    Args:
+        project_root: Root directory of the project. Defaults to current directory.
+
+    Returns:
+        Dictionary mapping command names to file paths:
+        {
+            "implement": Path,
+            "plan": Path,
+            "tasks": Path
+        }
+        Returns empty dict if format cannot be detected.
+    """
+    if project_root is None:
+        project_root = Path.cwd()
+
+    commands_dir = project_root / ".claude" / "commands"
+    format_type = _detect_command_format(project_root)
+
+    if format_type == "new":
+        return {
+            "implement": commands_dir / "speckit.implement.md",
+            "plan": commands_dir / "speckit.plan.md",
+            "tasks": commands_dir / "speckit.tasks.md",
+        }
+    elif format_type == "old":
+        return {
+            "implement": commands_dir / "implement.md",
+            "plan": commands_dir / "plan.md",
+            "tasks": commands_dir / "tasks.md",
+        }
+    else:
+        return {}
 
 
 def verify_agents_installed(project_root: Optional[Path] = None) -> bool:
@@ -94,14 +179,14 @@ def create_backup(project_root: Optional[Path] = None) -> Path:
     backup_dir = project_root / f".integration-backup-{timestamp}"
     backup_dir.mkdir(parents=True, exist_ok=True)
 
-    commands_dir = project_root / ".claude" / "commands"
-    files_to_backup = ["implement.md", "plan.md", "tasks.md"]
+    # Get command files based on detected format
+    command_files = _get_command_files(project_root)
 
-    for filename in files_to_backup:
-        source = commands_dir / filename
-        if source.exists():
-            dest = backup_dir / filename
-            shutil.copy2(source, dest)
+    for command_name, source_path in command_files.items():
+        if source_path.exists():
+            # Preserve original filename in backup
+            dest = backup_dir / source_path.name
+            shutil.copy2(source_path, dest)
 
     return backup_dir
 
@@ -123,27 +208,37 @@ def validate_integration(project_root: Optional[Path] = None) -> ValidationResul
     if project_root is None:
         project_root = Path.cwd()
 
-    commands_dir = project_root / ".claude" / "commands"
     results: ValidationResult = {
         "valid": True,
         "errors": [],
         "files_checked": []
     }
 
+    # Get command files based on detected format
+    command_files = _get_command_files(project_root)
+
+    if not command_files:
+        results["valid"] = False
+        results["errors"].append("No Spec Kit command files detected")
+        return results
+
     # Check that command files exist and contain integration sections
     expected_sections = {
-        "implement.md": "## Agent Integration",
-        "plan.md": "## Quality Standards (Required for DEV Integration)",
-        "tasks.md": "## Task Format (Required for DEV Integration)"
+        "implement": "## Agent Integration",
+        "plan": "## Quality Standards (Required for DEV Integration)",
+        "tasks": "## Task Format (Required for DEV Integration)"
     }
 
-    for filename, section_marker in expected_sections.items():
-        filepath = commands_dir / filename
-        results["files_checked"].append(filename)
+    for command_name, filepath in command_files.items():
+        results["files_checked"].append(filepath.name)
 
         if not filepath.exists():
             results["valid"] = False
-            results["errors"].append(f"{filename} not found")
+            results["errors"].append(f"{filepath.name} not found")
+            continue
+
+        section_marker = expected_sections.get(command_name)
+        if not section_marker:
             continue
 
         try:
@@ -151,12 +246,12 @@ def validate_integration(project_root: Optional[Path] = None) -> ValidationResul
             if section_marker not in content:
                 results["valid"] = False
                 error_msg = (
-                    f"{filename} missing integration section: {section_marker}"
+                    f"{filepath.name} missing integration section: {section_marker}"
                 )
                 results["errors"].append(error_msg)
         except Exception as e:
             results["valid"] = False
-            results["errors"].append(f"Error reading {filename}: {str(e)}")
+            results["errors"].append(f"Error reading {filepath.name}: {str(e)}")
 
     return results
 
@@ -273,9 +368,10 @@ def integrate_implement_command(project_root: Optional[Path] = None) -> bool:
     if project_root is None:
         project_root = Path.cwd()
 
-    filepath = project_root / ".claude" / "commands" / "implement.md"
+    command_files = _get_command_files(project_root)
+    filepath = command_files.get("implement")
 
-    if not filepath.exists():
+    if not filepath or not filepath.exists():
         return False
 
     content = filepath.read_text()
@@ -325,9 +421,10 @@ def integrate_plan_command(project_root: Optional[Path] = None) -> bool:
     if project_root is None:
         project_root = Path.cwd()
 
-    filepath = project_root / ".claude" / "commands" / "plan.md"
+    command_files = _get_command_files(project_root)
+    filepath = command_files.get("plan")
 
-    if not filepath.exists():
+    if not filepath or not filepath.exists():
         return False
 
     content = filepath.read_text()
@@ -377,9 +474,10 @@ def integrate_tasks_command(project_root: Optional[Path] = None) -> bool:
     if project_root is None:
         project_root = Path.cwd()
 
-    filepath = project_root / ".claude" / "commands" / "tasks.md"
+    command_files = _get_command_files(project_root)
+    filepath = command_files.get("tasks")
 
-    if not filepath.exists():
+    if not filepath or not filepath.exists():
         return False
 
     content = filepath.read_text()
@@ -455,6 +553,15 @@ def integrate_spec_kit(project_root: Optional[Path] = None) -> IntegrationResult
         )
         return result
 
+    # Detect command format
+    format_type = _detect_command_format(project_root)
+    if format_type is None:
+        result["errors"].append(
+            "Spec Kit command files not found. "
+            "Expected either speckit.*.md (v0.0.57+) or *.md (pre-v0.0.57) format."
+        )
+        return result
+
     # Step 2: Create backup
     try:
         backup_dir = create_backup(project_root)
@@ -465,14 +572,16 @@ def integrate_spec_kit(project_root: Optional[Path] = None) -> IntegrationResult
 
     # Step 3: Integrate commands
     try:
+        command_files = _get_command_files(project_root)
+
         if integrate_implement_command(project_root):
-            result["files_modified"].append("implement.md")
+            result["files_modified"].append(command_files["implement"].name)
 
         if integrate_plan_command(project_root):
-            result["files_modified"].append("plan.md")
+            result["files_modified"].append(command_files["plan"].name)
 
         if integrate_tasks_command(project_root):
-            result["files_modified"].append("tasks.md")
+            result["files_modified"].append(command_files["tasks"].name)
 
     except Exception as e:
         result["errors"].append(f"Integration failed: {str(e)}")

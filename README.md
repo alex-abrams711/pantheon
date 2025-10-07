@@ -307,6 +307,17 @@ pantheon rollback
 - Claude Code (for using agents)
 - Spec Kit v0.0.55+ (optional, for integration)
 
+### Spec Kit Compatibility
+
+Pantheon supports both Spec Kit command formats:
+
+- **Pre-v0.0.57**: `implement.md`, `plan.md`, `tasks.md`
+- **v0.0.57+**: `speckit.implement.md`, `speckit.plan.md`, `speckit.tasks.md`
+
+Format detection is automatic - Pantheon will detect which version you have installed and integrate accordingly.
+
+**Tested versions:** v0.0.55, v0.0.56, v0.0.57, v0.0.58
+
 ## Development
 
 ### Setup
