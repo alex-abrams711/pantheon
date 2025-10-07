@@ -712,3 +712,201 @@ def rollback_integration(project_root: Optional[Path] = None) -> RollbackResult:
     result["success"] = restore_result["success"]
 
     return result
+
+
+# Multi-Agent Workflow Orchestration content to be added to CLAUDE.md
+ORCHESTRATION_SECTION = """
+## Multi-Agent Workflow Orchestration
+
+### Overview
+
+Pantheon uses a multi-agent architecture with DEV and QA agents for
+quality-first development. As the orchestrator, you coordinate task execution,
+quality validation, and commits.
+
+### Parallel Execution Strategy
+
+**When to use parallel execution**:
+- Tasks marked `[P]` in tasks.md (parallel-safe)
+- Tasks affecting different files with no shared state
+- Maximum 3 DEV agents running simultaneously
+
+**How to invoke parallel DEV agents**:
+```
+# SINGLE message with multiple Task tool calls:
+Use the DEV agent to implement T001: [task description]
+Use the DEV agent to implement T002: [task description]
+Use the DEV agent to implement T003: [task description]
+```
+
+**Important**: ALL parallel invocations MUST be in a SINGLE message.
+Do NOT send separate messages.
+
+### DEV Agent Context Package
+
+When invoking DEV agent, provide complete context:
+
+```markdown
+# Task Context: [Task ID]
+
+## Task Details
+**ID**: [Task ID]
+**Description**: [Task description]
+**Files**: [Comma-separated file paths]
+
+## Acceptance Criteria
+- [ ] [Specific acceptance criterion 1]
+- [ ] [Specific acceptance criterion 2]
+[... from tasks.md subtasks]
+
+## Quality Standards
+**Test Command**: [from plan.md]
+**Lint Command**: [from plan.md]
+**Type Command**: [from plan.md]
+**Coverage Threshold**: [from plan.md]
+
+## Related Requirements
+[FR-XXX references from tasks.md]
+
+## Tech Stack
+**Language**: [from plan.md]
+**Patterns**: [Architecture patterns to follow]
+**Testing**: [Testing approach]
+
+## Constitution
+[Relevant principles from constitution]
+```
+
+### QA Validation Workflow
+
+**When to invoke QA agent**:
+- After completing a batch of related tasks
+- Before creating commits
+- At phase boundaries
+
+**QA Agent Context Package**:
+
+```markdown
+# QA Validation Context
+
+## Tasks to Validate
+- **[Task ID]**: [Description]
+  - Files: [file paths]
+[... for each task in batch]
+
+## Quality Standards
+**Test Command**: [from plan.md]
+**Coverage Command**: [test command with --cov flags]
+**Coverage Threshold**: [from plan.md]
+**Lint Command**: [from plan.md]
+**Type Command**: [from plan.md]
+
+## Definition of Done
+- [ ] All tests pass (0 failures)
+- [ ] Coverage ≥[threshold]% branches
+- [ ] No linting errors
+- [ ] No type errors
+- [ ] No code smells (console.log, TODO, unused imports)
+- [ ] Manual testing passed (if functional changes)
+
+## Project Root
+[Absolute path to project root]
+
+## Manual Testing Required
+[YES/NO] - [Description if YES]
+```
+
+**Processing QA Report**:
+- If `Status: PASS`: Create commits for validated tasks
+- If `Status: FAIL`: Reinvoke DEV agents to fix issues, then re-validate
+- Maximum 2-3 rework cycles before escalating to user
+
+### Phase Gate Checkpoints
+
+**At phase boundaries**:
+1. Generate Phase Completion Report showing:
+   - Completed tasks
+   - Quality metrics (tests, coverage, lint, type)
+   - Git commits created
+   - Statistics (agents invoked, rework cycles)
+
+2. Present to user for approval:
+   ```markdown
+   # Phase [N] Complete: [Phase Name]
+
+   [Summary of completed work]
+
+   Type 'yes' to proceed to Phase [N+1], 'review' to pause, or 'no' to halt.
+   ```
+
+3. Wait for user approval before proceeding
+
+### Commit Strategy
+
+**CRITICAL**: Commits are created ONLY by orchestrator, NEVER by agents.
+
+**When to commit**:
+- ONLY after QA PASS status
+- At phase boundaries (after user approval)
+- Atomic commits per task or logical batch
+
+**Commit message format**:
+```
+[type]: [Task IDs] [Brief description]
+
+[Detailed changes]
+
+Quality metrics:
+- Tests: [passing]/[total] passing
+- Coverage: [percentage]% branches
+- Lint: 0 errors
+- Type: 0 errors
+```
+
+**Example**:
+```
+feat: T001-T003 Add quality discovery and config modules
+
+- Implement project-agnostic quality command discovery
+- Generate quality config JSON with auto-detected commands
+- Support Python, Node.js, Go project types
+
+Quality metrics:
+- Tests: 18/18 passing
+- Coverage: 92% branches
+- Lint: 0 errors
+- Type: 0 errors
+```
+"""
+
+
+def integrate_claude_md(project_root: Optional[Path] = None) -> bool:
+    """Add multi-agent orchestration section to CLAUDE.md.
+
+    Args:
+        project_root: Root directory of the project. Defaults to current directory.
+
+    Returns:
+        True if integration successful, False otherwise.
+    """
+    if project_root is None:
+        project_root = Path.cwd()
+
+    claude_md_path = project_root / "CLAUDE.md"
+
+    # Check if orchestration section already exists
+    if claude_md_path.exists():
+        content = claude_md_path.read_text()
+        if "## Multi-Agent Workflow Orchestration" in content:
+            return True  # Already integrated
+    else:
+        # Create CLAUDE.md if doesn't exist
+        content = "# Claude Instructions\n\n"
+
+    # Append orchestration section
+    updated_content = content.rstrip() + "\n" + ORCHESTRATION_SECTION
+
+    # Write updated content
+    claude_md_path.write_text(updated_content)
+
+    return True

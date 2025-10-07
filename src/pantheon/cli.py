@@ -163,6 +163,18 @@ def integrate(dry_run: bool) -> None:
             click.echo("   Run 'pantheon rollback' to restore")
         return
 
+    # Integrate orchestration instructions into CLAUDE.md
+    click.echo("\nIntegrating orchestration instructions...\n")
+    from pantheon.integrations.spec_kit import integrate_claude_md
+
+    try:
+        if integrate_claude_md(cwd):
+            click.echo("✓ CLAUDE.md updated with multi-agent workflow orchestration")
+        else:
+            click.echo("⚠️  Could not update CLAUDE.md")
+    except Exception as e:
+        click.echo(f"⚠️  CLAUDE.md integration warning: {e}")
+
     # Install quality hooks
     click.echo("\nInstalling quality gate hooks...\n")
     try:

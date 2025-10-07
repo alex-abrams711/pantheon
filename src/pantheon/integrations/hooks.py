@@ -155,14 +155,14 @@ def validate_hook_installation(project_root: Path) -> dict[str, str]:
         except (json.JSONDecodeError, OSError):
             pass
 
-    # Hook mappings: (script_filename, hook_name, settings_key)
+    # Hook checks: (script_filename, hook_name, settings_key, expected_matcher)
     hook_checks = [
-        ("subagent-validation.sh", "SubagentStop", "SubagentStop"),
-        ("pre-commit-gate.sh", "PreCommit", "PreCommit"),
-        ("phase-gate.sh", "PhaseGate", "UserPromptSubmit"),
+        ("subagent-validation.sh", "SubagentStop", "SubagentStop", ""),
+        ("pre-commit-gate.sh", "PreCommit", "PreToolUse", "Bash(git commit*)"),
+        ("phase-gate.sh", "PhaseGate", "UserPromptSubmit", ""),
     ]
 
-    for script_filename, hook_name, settings_key in hook_checks:
+    for script_filename, hook_name, settings_key, expected_matcher in hook_checks:
         script_path = hooks_dir / script_filename
 
         # Check if script exists
@@ -175,14 +175,40 @@ def validate_hook_installation(project_root: Path) -> dict[str, str]:
             results[hook_name] = f"Missing executable permission on {script_filename}"
             continue
 
-        # Check if settings.json has correct path
+        # Check if settings.json has correct configuration (all use array format)
         if settings_key not in settings_hooks:
             results[hook_name] = "Not configured in .claude/settings.json"
             continue
 
-        settings_path_str = settings_hooks[settings_key]
-        if script_filename not in settings_path_str:
-            results[hook_name] = f"Incorrect path in settings.json: {settings_path_str}"
+        hook_array = settings_hooks[settings_key]
+        if not isinstance(hook_array, list):
+            results[hook_name] = f"{settings_key} not configured as array"
+            continue
+
+        # Check if hook with expected matcher exists
+        matching_hook = None
+        for hook in hook_array:
+            matcher = hook.get("matcher") if isinstance(hook, dict) else None
+            if matcher == expected_matcher:
+                matching_hook = hook
+                break
+
+        if not matching_hook:
+            if expected_matcher:
+                matcher_desc = f"matcher '{expected_matcher}'"
+            else:
+                matcher_desc = "empty matcher"
+            results[hook_name] = f"Hook with {matcher_desc} not found in {settings_key}"
+            continue
+
+        # Verify the hook command points to correct script
+        hook_commands = matching_hook.get("hooks", [])
+        has_correct_path = any(
+            script_filename in cmd.get("command", "")
+            for cmd in hook_commands
+        )
+        if not has_correct_path:
+            results[hook_name] = f"Incorrect path in {settings_key} hook"
             continue
 
         # All checks passed
@@ -205,11 +231,76 @@ def _update_settings_json(project_root: Path, hooks_dir: Path) -> None:
     # Add hooks configuration
     # Paths are relative to project root
     rel_hooks_dir = hooks_dir.relative_to(project_root)
-    settings["hooks"] = {
-        "SubagentStop": str(rel_hooks_dir / "subagent-validation.sh"),
-        "PreCommit": str(rel_hooks_dir / "pre-commit-gate.sh"),
-        "UserPromptSubmit": str(rel_hooks_dir / "phase-gate.sh"),
-    }
+
+    # Initialize hooks dict if not present
+    if "hooks" not in settings:
+        settings["hooks"] = {}
+
+    # Add SubagentStop (consistent array format with empty matcher)
+    if "SubagentStop" not in settings["hooks"]:
+        settings["hooks"]["SubagentStop"] = []
+
+    # Check if SubagentStop hook already exists
+    subagent_stop_exists = any(
+        hook.get("matcher") == ""
+        for hook in settings["hooks"]["SubagentStop"]
+        if isinstance(hook, dict)
+    )
+
+    if not subagent_stop_exists:
+        settings["hooks"]["SubagentStop"].append({
+            "matcher": "",
+            "hooks": [
+                {
+                    "type": "command",
+                    "command": str(rel_hooks_dir / "subagent-validation.sh")
+                }
+            ]
+        })
+
+    # Add UserPromptSubmit (consistent array format with empty matcher)
+    if "UserPromptSubmit" not in settings["hooks"]:
+        settings["hooks"]["UserPromptSubmit"] = []
+
+    # Check if UserPromptSubmit hook already exists
+    user_prompt_submit_exists = any(
+        hook.get("matcher") == ""
+        for hook in settings["hooks"]["UserPromptSubmit"]
+        if isinstance(hook, dict)
+    )
+
+    if not user_prompt_submit_exists:
+        settings["hooks"]["UserPromptSubmit"].append({
+            "matcher": "",
+            "hooks": [
+                {
+                    "type": "command",
+                    "command": str(rel_hooks_dir / "phase-gate.sh")
+                }
+            ]
+        })
+
+    # Add PreToolUse for git commit validation (array format with matcher)
+    if "PreToolUse" not in settings["hooks"]:
+        settings["hooks"]["PreToolUse"] = []
+
+    # Check if git commit hook already exists
+    git_commit_hook_exists = any(
+        hook.get("matcher") == "Bash(git commit*)"
+        for hook in settings["hooks"]["PreToolUse"]
+        if isinstance(hook, dict)
+    )
+
+    if not git_commit_hook_exists:
+        settings["hooks"]["PreToolUse"].append({
+            "matcher": "Bash(git commit*)",
+            "hooks": [
+                {
+                    "type": "command",
+                    "command": str(rel_hooks_dir / "pre-commit-gate.sh")
+                }
+            ]
+        })
 
     # Write updated settings
     with open(settings_path, "w") as f:
@@ -227,9 +318,36 @@ def _remove_hooks_from_settings(project_root: Path) -> None:
     with open(settings_path) as f:
         settings = json.load(f)
 
-    # Remove hooks key
+    # Remove specific hooks
     if "hooks" in settings:
-        del settings["hooks"]
+        hooks = settings["hooks"]
+
+        # Remove SubagentStop
+        if "SubagentStop" in hooks:
+            del hooks["SubagentStop"]
+
+        # Remove UserPromptSubmit
+        if "UserPromptSubmit" in hooks:
+            del hooks["UserPromptSubmit"]
+
+        # Remove git commit hook from PreToolUse
+        if "PreToolUse" in hooks and isinstance(hooks["PreToolUse"], list):
+            # Filter out git commit hooks
+            filtered_hooks = []
+            for hook in hooks["PreToolUse"]:
+                matcher = hook.get("matcher") if isinstance(hook, dict) else None
+                if matcher != "Bash(git commit*)":
+                    filtered_hooks.append(hook)
+
+            hooks["PreToolUse"] = filtered_hooks
+
+            # Remove PreToolUse key if empty
+            if not hooks["PreToolUse"]:
+                del hooks["PreToolUse"]
+
+        # Remove hooks key if empty
+        if not hooks:
+            del settings["hooks"]
 
     # Write updated settings
     with open(settings_path, "w") as f:
