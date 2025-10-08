@@ -34,7 +34,7 @@ class TestHookInstallationE2E:
             # Verify all three hooks installed successfully
             assert result["SubagentStop"] is True
             assert result["PreCommit"] is True
-            assert result["PhaseGate"] is True
+            assert result["PhaseTransitionGate"] is True
 
             # Verify .pantheon/hooks/ directory created with 3 scripts
             hooks_dir = project_root / ".pantheon" / "hooks"
@@ -44,7 +44,7 @@ class TestHookInstallationE2E:
             expected_scripts = [
                 "subagent-validation.sh",
                 "pre-commit-gate.sh",
-                "phase-gate.sh",
+                "phase-transition-gate.sh",
             ]
             for script in expected_scripts:
                 script_path = hooks_dir / script
@@ -67,13 +67,14 @@ class TestHookInstallationE2E:
 
             assert "hooks" in settings
             assert "SubagentStop" in settings["hooks"]
-            assert "PreCommit" in settings["hooks"]
-            assert "UserPromptSubmit" in settings["hooks"]
+            assert "PreToolUse" in settings["hooks"]
 
             # Verify hook paths are correct
-            assert "subagent-validation.sh" in settings["hooks"]["SubagentStop"]
-            assert "pre-commit-gate.sh" in settings["hooks"]["PreCommit"]
-            assert "phase-gate.sh" in settings["hooks"]["UserPromptSubmit"]
+            subagent_hooks = settings["hooks"]["SubagentStop"]
+            pretool_hooks = settings["hooks"]["PreToolUse"]
+            assert any("subagent-validation.sh" in str(h) for h in subagent_hooks)
+            assert any("pre-commit-gate.sh" in str(h) for h in pretool_hooks)
+            assert any("phase-transition-gate.sh" in str(h) for h in pretool_hooks)
 
     def test_hook_validation_success(self) -> None:
         """Test hook validation after successful installation."""
@@ -91,7 +92,7 @@ class TestHookInstallationE2E:
             # All hooks should validate as OK
             assert validation["SubagentStop"] == "OK"
             assert validation["PreCommit"] == "OK"
-            assert validation["PhaseGate"] == "OK"
+            assert validation["PhaseTransitionGate"] == "OK"
 
     def test_rollback_uninstall_workflow(self) -> None:
         """Test rollback/uninstall workflow from quickstart.md Step 8."""
@@ -250,7 +251,7 @@ class TestHookValidationEdgeCases:
 
             # Others should still be OK
             assert validation["PreCommit"] == "OK"
-            assert validation["PhaseGate"] == "OK"
+            assert validation["PhaseTransitionGate"] == "OK"
 
     def test_validation_detects_non_executable_script(self) -> None:
         """Test that validation detects when a script is not executable."""
@@ -274,4 +275,4 @@ class TestHookValidationEdgeCases:
 
             # Others should still be OK
             assert validation["SubagentStop"] == "OK"
-            assert validation["PhaseGate"] == "OK"
+            assert validation["PhaseTransitionGate"] == "OK"

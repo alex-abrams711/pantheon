@@ -49,6 +49,11 @@ NEVER access the docs/archive directory.
 
 Pantheon uses a multi-agent architecture with DEV and QA agents for quality-first development. As the orchestrator, you coordinate task execution, quality validation, and commits.
 
+**Hook Enforcement**: Quality gates are enforced via hooks to prevent workflow violations:
+- **PreToolUse Task**: Blocks DEV agent invocation if transitioning to new phase without QA validation and user approval
+- **PreToolUse Bash(git commit*)**: Blocks commits without QA validation
+- **SubagentStop**: Validates DEV/QA agent completion before returning results
+
 ### Parallel Execution Strategy
 
 **When to use parallel execution**:
@@ -141,38 +146,66 @@ When invoking DEV agent, provide complete context:
 ```
 
 **Processing QA Report**:
-- If `Status: PASS`: Create commits for validated tasks
+- If `Status: PASS`: Mark "QA validated" in tasks.md, then proceed to phase gate checkpoint
 - If `Status: FAIL`: Reinvoke DEV agents to fix issues, then re-validate
 - Maximum 2-3 rework cycles before escalating to user
 
+**CRITICAL**: Do NOT create commits immediately after QA PASS. Commits happen ONLY after user approval at phase gate checkpoint.
+
 ### Phase Gate Checkpoints
 
-**At phase boundaries**:
-1. Generate Phase Completion Report showing:
-   - Completed tasks
-   - Quality metrics (tests, coverage, lint, type)
-   - Git commits created
-   - Statistics (agents invoked, rework cycles)
+**MANDATORY WORKFLOW - After QA Validation**:
 
-2. Present to user for approval:
+1. **Mark QA Validation** in tasks.md:
+   ```
+   - [x] QA validated
+   ```
+
+2. **Generate Phase Completion Report**:
+   - Completed tasks (Task IDs and descriptions)
+   - Quality metrics (tests, coverage, lint, type)
+   - Deliverables (what was implemented)
+   - Ready for: [Next phase name]
+
+   **Do NOT include "Git commits created" - commits haven't happened yet**
+
+3. **Present to User**:
    ```markdown
    # Phase [N] Complete: [Phase Name]
 
-   [Summary of completed work]
+   [Phase completion report from step 2]
 
-   Type 'yes' to proceed to Phase [N+1], 'review' to pause, or 'no' to halt.
+   Type 'yes' to proceed, 'review' to pause, or 'no' to halt.
    ```
 
-3. Wait for user approval before proceeding
+4. **Wait for User Response** - Do NOT proceed until user types "yes"
+
+5. **After User Types "yes"**:
+   - Mark user validation in tasks.md:
+     ```
+     - [x] User validated
+     ```
+   - NOW create git commits for the phase
+   - Proceed to next phase
+
+**CRITICAL**: Commits happen ONLY in step 5, AFTER user approval. The phase gate hook will block phase transitions if user validation is missing.
 
 ### Commit Strategy
 
 **CRITICAL**: Commits are created ONLY by orchestrator, NEVER by agents.
 
 **When to commit**:
-- ONLY after QA PASS status
-- At phase boundaries (after user approval)
-- Atomic commits per task or logical batch
+- ONLY after BOTH conditions are met:
+  1. QA agent returns PASS status (marked in tasks.md: "- [x] QA validated")
+  2. User approves phase completion (marked in tasks.md: "- [x] User validated")
+- Commits are created at phase boundaries AFTER user approval, never before
+- Atomic commits per task or logical batch within the phase
+
+**Workflow**:
+1. QA validates → Mark "QA validated"
+2. Present phase report → User approves ("yes") → Mark "User validated"
+3. Create commit(s)
+4. Proceed to next phase
 
 **Commit message format**:
 ```

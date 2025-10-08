@@ -226,7 +226,7 @@ def validate_integration(project_root: Optional[Path] = None) -> ValidationResul
     expected_sections = {
         "implement": "## Agent Integration",
         "plan": "## Quality Standards (Required for DEV Integration)",
-        "tasks": "## Task Format (Required for DEV Integration)"
+        "tasks": "### Phase-Level Checkboxes (Required for Workflow Enforcement)"
     }
 
     for command_name, filepath in command_files.items():
@@ -259,72 +259,39 @@ def validate_integration(project_root: Optional[Path] = None) -> ValidationResul
 # Integration directives to be inserted into Spec Kit commands
 IMPLEMENT_DIRECTIVE = """## Agent Integration
 
-**Multi-Agent Workflow**: Task execution uses DEV and QA agents with quality gates.
+**Workflow**: DEV agents → QA validation (MANDATORY) → Commits
 
-### DEV Agent Delegation
+### 1. Execute Tasks (DEV Agents)
 
-When executing tasks:
-1. For each task in tasks.md, prepare a context package containing:
-   - Task ID, description, and file paths
-   - Relevant spec requirements (FR-XXX references)
-   - Quality standards from plan.md (lint/type/test commands)
-   - Subtasks as acceptance criteria
-   - Tech stack constraints
+For each task in tasks.md:
+- Invoke DEV agent with context: Task ID, files, acceptance criteria,
+  quality standards from plan.md
+- For parallel tasks marked `[P]`: Invoke up to 3 DEV agents in SINGLE message
 
-2. Invoke DEV sub-agent using Task tool:
-   ```
-   Use Task tool:
-     subagent_type: "dev"
-     description: "Implement [Task ID]"
-     prompt: [context package from above]
-   ```
+### 2. Validate Quality (QA Agent - REQUIRED)
 
-3. Process DEV results:
-   - If success: mark task complete, log decisions, continue
-   - If failure: halt, report status, wait for user
+**After ALL DEV agents complete, BEFORE any commits**:
 
-### Parallel Execution
-
-For tasks marked [P] in tasks.md (parallel-safe):
-- Invoke up to 3 DEV agents simultaneously in a SINGLE message
-- Use multiple Task tool calls in one message
-- Wait for all agents to complete before proceeding
-- Example:
-  ```
-  Use the DEV agent to implement T001: [description]
-  Use the DEV agent to implement T002: [description]
-  Use the DEV agent to implement T003: [description]
-  ```
-
-### QA Validation
-
-After completing a batch of related tasks:
-1. Prepare QA context package containing:
-   - List of completed task IDs
-   - Quality standards from plan.md
-   - Definition of Done checklist
-   - Manual testing requirements (if functional changes)
-
-2. Invoke QA sub-agent using Task tool:
+1. **DO NOT commit yet**
+2. Invoke QA agent with ALL completed task IDs:
    ```
    Use Task tool:
      subagent_type: "qa"
-     description: "Validate batch: [Task IDs]"
-     prompt: [QA context package from above]
+     description: "Validate tasks: [IDs]"
+     prompt: [QA context - tasks, quality standards, Definition of Done]
    ```
-
 3. Process QA report:
-   - If PASS: create commits for validated tasks
-   - If FAIL: reinvoke DEV agents to fix issues, then re-validate
+   - **PASS**: Proceed to commits
+   - **FAIL**: Fix issues with DEV agents, re-validate (max 2-3 cycles)
 
-### Commit Strategy
+**CRITICAL**: NO commits until QA reports PASS.
 
-- Commits created ONLY after QA PASS
-- Orchestrator creates commits (DEV/QA agents do NOT commit)
-- Atomic commits per task or logical batch
-- Include task IDs and quality metrics in commit message
+### 3. Create Commits (After QA PASS Only)
 
-See `.claude/agents/dev.md` and `.claude/agents/qa.md` for agent workflows.
+- Include task IDs and quality metrics from QA report in commit message
+- Orchestrator creates commits (agents never commit)
+
+See `.claude/agents/dev.md` and `.claude/agents/qa.md` for details.
 
 ---
 """
@@ -343,6 +310,30 @@ If commands cannot be auto-discovered, mark as "CLARIFICATION REQUIRED".
 """
 
 TASKS_DIRECTIVE = """## Task Format (Required for DEV Integration)
+
+### Phase-Level Checkboxes (Required for Workflow Enforcement)
+
+Each phase MUST include checkboxes immediately after the phase header:
+
+```markdown
+## Phase 3.1: Setup
+- [ ] All tasks complete
+- [ ] QA validated
+- [ ] User validated
+
+- [ ] **T001** [Task Description]
+```
+
+**Checkbox Workflow**:
+- `All tasks complete`: Auto-checked when all task checkboxes in phase are [x]
+- `QA validated`: Checked by orchestrator after QA agent returns PASS
+- `User validated`: Checked when user types "yes" at phase gate
+
+**Hook Enforcement**: PreToolUse Task hook blocks DEV agent invocation if:
+- Transitioning to new phase without previous phase `QA validated`
+- Transitioning to new phase without previous phase `User validated`
+
+### Task Format
 
 Each task should include subtasks as acceptance criteria:
 
@@ -720,31 +711,15 @@ ORCHESTRATION_SECTION = """
 
 ### Overview
 
-Pantheon uses a multi-agent architecture with DEV and QA agents for
-quality-first development. As the orchestrator, you coordinate task execution,
-quality validation, and commits.
+Pantheon uses DEV and QA agents for quality-first development.
+Workflow: Execute tasks → QA validation (MANDATORY) → Commits → User approval
 
-### Parallel Execution Strategy
-
-**When to use parallel execution**:
-- Tasks marked `[P]` in tasks.md (parallel-safe)
-- Tasks affecting different files with no shared state
-- Maximum 3 DEV agents running simultaneously
-
-**How to invoke parallel DEV agents**:
-```
-# SINGLE message with multiple Task tool calls:
-Use the DEV agent to implement T001: [task description]
-Use the DEV agent to implement T002: [task description]
-Use the DEV agent to implement T003: [task description]
-```
-
-**Important**: ALL parallel invocations MUST be in a SINGLE message.
-Do NOT send separate messages.
+**Critical Rules**:
+1. QA validation is MANDATORY after ALL DEV agents complete
+2. NO commits until QA reports PASS status
+3. Orchestrator creates commits (agents never commit)
 
 ### DEV Agent Context Package
-
-When invoking DEV agent, provide complete context:
 
 ```markdown
 # Task Context: [Task ID]
@@ -757,7 +732,6 @@ When invoking DEV agent, provide complete context:
 ## Acceptance Criteria
 - [ ] [Specific acceptance criterion 1]
 - [ ] [Specific acceptance criterion 2]
-[... from tasks.md subtasks]
 
 ## Quality Standards
 **Test Command**: [from plan.md]
@@ -772,27 +746,18 @@ When invoking DEV agent, provide complete context:
 **Language**: [from plan.md]
 **Patterns**: [Architecture patterns to follow]
 **Testing**: [Testing approach]
-
-## Constitution
-[Relevant principles from constitution]
 ```
 
-### QA Validation Workflow
+### QA Agent Context Package
 
-**When to invoke QA agent**:
-- After completing a batch of related tasks
-- Before creating commits
-- At phase boundaries
-
-**QA Agent Context Package**:
+**When**: AFTER all DEV agents complete, BEFORE commits
 
 ```markdown
 # QA Validation Context
 
 ## Tasks to Validate
-- **[Task ID]**: [Description]
+- **T001**: [Task description]
   - Files: [file paths]
-[... for each task in batch]
 
 ## Quality Standards
 **Test Command**: [from plan.md]
@@ -806,7 +771,7 @@ When invoking DEV agent, provide complete context:
 - [ ] Coverage ≥[threshold]% branches
 - [ ] No linting errors
 - [ ] No type errors
-- [ ] No code smells (console.log, TODO, unused imports)
+- [ ] No code smells
 - [ ] Manual testing passed (if functional changes)
 
 ## Project Root
@@ -817,40 +782,71 @@ When invoking DEV agent, provide complete context:
 ```
 
 **Processing QA Report**:
-- If `Status: PASS`: Create commits for validated tasks
-- If `Status: FAIL`: Reinvoke DEV agents to fix issues, then re-validate
-- Maximum 2-3 rework cycles before escalating to user
+- **PASS**: Create commits
+- **FAIL**: Fix with DEV agents, re-validate (max 2-3 cycles)
+
+### Parallel Execution
+
+For tasks marked `[P]` in tasks.md:
+- Invoke up to 3 DEV agents in SINGLE message
+- Wait for ALL to complete before QA validation
 
 ### Phase Gate Checkpoints
 
-**At phase boundaries**:
-1. Generate Phase Completion Report showing:
-   - Completed tasks
-   - Quality metrics (tests, coverage, lint, type)
-   - Git commits created
-   - Statistics (agents invoked, rework cycles)
+At phase boundaries:
+1. Present phase completion report with quality metrics
+2. Wait for user approval ("yes" to proceed)
+3. Only proceed after user confirms
 
-2. Present to user for approval:
-   ```markdown
-   # Phase [N] Complete: [Phase Name]
+**Phase Checkbox Management** (tasks.md):
 
-   [Summary of completed work]
+Each phase has three checkboxes that MUST be updated:
 
-   Type 'yes' to proceed to Phase [N+1], 'review' to pause, or 'no' to halt.
+```markdown
+## Phase 3.1: Setup
+- [ ] All tasks complete
+- [ ] QA validated
+- [ ] User validated
+```
+
+**Update Workflow**:
+
+1. **After all DEV agents complete** → Check "All tasks complete":
+   ```bash
+   # Update tasks.md
+   sed -i '' '/^## Phase 3.1/,/^## Phase/ \
+     s/- \\[ \\] All tasks complete/- [x] All tasks complete/' \
+     tasks.md
    ```
 
-3. Wait for user approval before proceeding
+2. **After QA agent returns PASS** → Check "QA validated":
+   ```bash
+   # Update tasks.md with timestamp
+   DATE=$(date +%Y-%m-%d)
+   sed -i '' '/^## Phase 3.1/,/^## Phase/ \
+     s/- \\[ \\] QA validated/- [x] QA validated (PASS - '"$DATE"')/' \
+     tasks.md
+   ```
+
+3. **After user types "yes"** → Check "User validated":
+   ```bash
+   # Update tasks.md with timestamp
+   DATE=$(date +%Y-%m-%d)
+   sed -i '' '/^## Phase 3.1/,/^## Phase/ \
+     s/- \\[ \\] User validated/- [x] User validated ('"$DATE"')/' \
+     tasks.md
+   ```
+
+**Hook Enforcement**:
+- **PreToolUse Task** hook BLOCKS invoking DEV agents for new phase
+  if previous phase missing QA validated or User validated
+- **PreToolUse Bash(git commit*)** hook BLOCKS commits if QA not
+  validated
+- **SubagentStop** hook validates DEV/QA agent completion
 
 ### Commit Strategy
 
-**CRITICAL**: Commits are created ONLY by orchestrator, NEVER by agents.
-
-**When to commit**:
-- ONLY after QA PASS status
-- At phase boundaries (after user approval)
-- Atomic commits per task or logical batch
-
-**Commit message format**:
+Format:
 ```
 [type]: [Task IDs] [Brief description]
 
@@ -859,21 +855,6 @@ When invoking DEV agent, provide complete context:
 Quality metrics:
 - Tests: [passing]/[total] passing
 - Coverage: [percentage]% branches
-- Lint: 0 errors
-- Type: 0 errors
-```
-
-**Example**:
-```
-feat: T001-T003 Add quality discovery and config modules
-
-- Implement project-agnostic quality command discovery
-- Generate quality config JSON with auto-detected commands
-- Support Python, Node.js, Go project types
-
-Quality metrics:
-- Tests: 18/18 passing
-- Coverage: 92% branches
 - Lint: 0 errors
 - Type: 0 errors
 ```

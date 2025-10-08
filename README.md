@@ -211,9 +211,13 @@ For independent tasks marked `[P]` in tasks.md:
 
 ### Commit Strategy
 - QA validates batch of completed tasks
-- If QA returns PASS: orchestrator creates commit
+- If QA returns PASS: orchestrator presents phase completion report to user
+- User approves phase completion (types "yes")
+- After user approval: orchestrator creates commit
 - If QA returns FAIL: DEV agents fix issues, QA re-validates
 - Atomic commits with quality metrics in message
+
+**Quality Gates**: Pre-commit hook enforces both QA validation AND user approval before allowing commits.
 
 ## DEV Agent Workflow
 

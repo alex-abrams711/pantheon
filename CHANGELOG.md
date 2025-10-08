@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Phase Gate Enforcement**: Pre-commit hook now enforces BOTH QA validation AND user approval before commits
+  - Added user validation check to `pre-commit-gate.sh` hook
+  - Previously only checked "QA validated", allowing premature commits
+  - Hook now blocks commits if either "QA validated" or "User validated" is missing
+  - Error messages guide orchestrator through correct workflow
+- **CLAUDE.md Orchestration Instructions**: Corrected workflow to prevent premature commits
+  - QA Validation Workflow: Changed from "create commits after QA PASS" to "proceed to phase gate checkpoint"
+  - Phase Gate Checkpoints: Added explicit 5-step mandatory workflow with numbered steps
+  - Commit Strategy: Clarified that BOTH QA validation AND user approval are required
+  - Removed ambiguity that allowed orchestrator to commit before user approval
+- **README.md Commit Strategy**: Updated to reflect correct workflow requiring user approval
+
 ## [0.2.0] - 2025-10-06
 
 ### Added

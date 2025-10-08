@@ -52,7 +52,7 @@ def install_hooks(project_root: Path) -> dict[str, bool]:
     hook_mappings = [
         ("subagent-validation.sh", "SubagentStop"),
         ("pre-commit-gate.sh", "PreCommit"),
-        ("phase-gate.sh", "PhaseGate"),  # UserPromptSubmit
+        ("phase-transition-gate.sh", "PhaseTransitionGate"),
     ]
 
     results: dict[str, bool] = {}
@@ -159,7 +159,7 @@ def validate_hook_installation(project_root: Path) -> dict[str, str]:
     hook_checks = [
         ("subagent-validation.sh", "SubagentStop", "SubagentStop", ""),
         ("pre-commit-gate.sh", "PreCommit", "PreToolUse", "Bash(git commit*)"),
-        ("phase-gate.sh", "PhaseGate", "UserPromptSubmit", ""),
+        ("phase-transition-gate.sh", "PhaseTransitionGate", "PreToolUse", "Task"),
     ]
 
     for script_filename, hook_name, settings_key, expected_matcher in hook_checks:
@@ -258,24 +258,24 @@ def _update_settings_json(project_root: Path, hooks_dir: Path) -> None:
             ]
         })
 
-    # Add UserPromptSubmit (consistent array format with empty matcher)
-    if "UserPromptSubmit" not in settings["hooks"]:
-        settings["hooks"]["UserPromptSubmit"] = []
+    # Add PreToolUse Task hook for phase transitions
+    if "PreToolUse" not in settings["hooks"]:
+        settings["hooks"]["PreToolUse"] = []
 
-    # Check if UserPromptSubmit hook already exists
-    user_prompt_submit_exists = any(
-        hook.get("matcher") == ""
-        for hook in settings["hooks"]["UserPromptSubmit"]
+    # Check if Task hook already exists
+    task_hook_exists = any(
+        hook.get("matcher") == "Task"
+        for hook in settings["hooks"]["PreToolUse"]
         if isinstance(hook, dict)
     )
 
-    if not user_prompt_submit_exists:
-        settings["hooks"]["UserPromptSubmit"].append({
-            "matcher": "",
+    if not task_hook_exists:
+        settings["hooks"]["PreToolUse"].append({
+            "matcher": "Task",
             "hooks": [
                 {
                     "type": "command",
-                    "command": str(rel_hooks_dir / "phase-gate.sh")
+                    "command": str(rel_hooks_dir / "phase-transition-gate.sh")
                 }
             ]
         })
@@ -326,17 +326,14 @@ def _remove_hooks_from_settings(project_root: Path) -> None:
         if "SubagentStop" in hooks:
             del hooks["SubagentStop"]
 
-        # Remove UserPromptSubmit
-        if "UserPromptSubmit" in hooks:
-            del hooks["UserPromptSubmit"]
-
-        # Remove git commit hook from PreToolUse
+        # Remove Pantheon hooks from PreToolUse (git commit and Task hooks)
         if "PreToolUse" in hooks and isinstance(hooks["PreToolUse"], list):
-            # Filter out git commit hooks
+            # Filter out Pantheon hooks (git commit and Task)
             filtered_hooks = []
             for hook in hooks["PreToolUse"]:
                 matcher = hook.get("matcher") if isinstance(hook, dict) else None
-                if matcher != "Bash(git commit*)":
+                # Keep hooks that aren't ours
+                if matcher not in ["Bash(git commit*)", "Task"]:
                     filtered_hooks.append(hook)
 
             hooks["PreToolUse"] = filtered_hooks

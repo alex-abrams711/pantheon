@@ -48,7 +48,7 @@ class TestInstallHooks:
         hooks_dir = tmp_path / ".pantheon" / "hooks"
         assert (hooks_dir / "subagent-validation.sh").exists()
         assert (hooks_dir / "pre-commit-gate.sh").exists()
-        assert (hooks_dir / "phase-gate.sh").exists()
+        assert (hooks_dir / "phase-transition-gate.sh").exists()
 
     def test_install_makes_scripts_executable(self, tmp_path: Path) -> None:
         """Contract: makes hook scripts executable (chmod +x)."""
@@ -64,7 +64,7 @@ class TestInstallHooks:
         for script in [
             "subagent-validation.sh",
             "pre-commit-gate.sh",
-            "phase-gate.sh",
+            "phase-transition-gate.sh",
         ]:
             script_path = hooks_dir / script
             assert os.access(script_path, os.X_OK), f"{script} not executable"
@@ -87,13 +87,18 @@ class TestInstallHooks:
 
         assert "hooks" in settings
         assert "SubagentStop" in settings["hooks"]
-        assert "PreCommit" in settings["hooks"]
-        assert "UserPromptSubmit" in settings["hooks"]
+        assert "PreToolUse" in settings["hooks"]
 
-        # Verify paths are correct
-        assert "subagent-validation.sh" in settings["hooks"]["SubagentStop"]
-        assert "pre-commit-gate.sh" in settings["hooks"]["PreCommit"]
-        assert "phase-gate.sh" in settings["hooks"]["UserPromptSubmit"]
+        # Verify SubagentStop hook
+        subagent_hooks = settings["hooks"]["SubagentStop"]
+        assert isinstance(subagent_hooks, list)
+        assert any("subagent-validation.sh" in str(h) for h in subagent_hooks)
+
+        # Verify PreToolUse hooks (git commit and Task)
+        pretool_hooks = settings["hooks"]["PreToolUse"]
+        assert isinstance(pretool_hooks, list)
+        assert any("pre-commit-gate.sh" in str(h) for h in pretool_hooks)
+        assert any("phase-transition-gate.sh" in str(h) for h in pretool_hooks)
 
     def test_install_preserves_existing_settings_json_content(
         self, tmp_path: Path
@@ -131,10 +136,10 @@ class TestInstallHooks:
         assert isinstance(result, dict)
         assert "SubagentStop" in result
         assert "PreCommit" in result
-        assert "PhaseGate" in result
+        assert "PhaseTransitionGate" in result
         assert result["SubagentStop"] is True
         assert result["PreCommit"] is True
-        assert result["PhaseGate"] is True
+        assert result["PhaseTransitionGate"] is True
 
     def test_install_raises_file_not_found_if_no_claude_directory(
         self, tmp_path: Path
@@ -266,7 +271,7 @@ class TestValidateHookInstallation:
         # Verify: All hooks OK
         assert result["SubagentStop"] == "OK"
         assert result["PreCommit"] == "OK"
-        assert result["PhaseGate"] == "OK"
+        assert result["PhaseTransitionGate"] == "OK"
 
     def test_validate_returns_error_for_missing_script(self, tmp_path: Path) -> None:
         """Contract: detects missing hook script."""
@@ -274,15 +279,16 @@ class TestValidateHookInstallation:
         (tmp_path / ".claude").mkdir()
         (tmp_path / ".claude" / "settings.json").write_text("{}")
         install_hooks(tmp_path)
-        (tmp_path / ".pantheon" / "hooks" / "phase-gate.sh").unlink()
+        (tmp_path / ".pantheon" / "hooks" / "phase-transition-gate.sh").unlink()
 
         # Execute
         result = validate_hook_installation(tmp_path)
 
         # Verify: Error message for missing script
-        assert "OK" not in result["PhaseGate"]
+        assert "OK" not in result["PhaseTransitionGate"]
         assert (
-            "Missing" in result["PhaseGate"] or "not found" in result["PhaseGate"]
+            "Missing" in result["PhaseTransitionGate"]
+            or "not found" in result["PhaseTransitionGate"]
         )
 
     def test_validate_returns_error_for_non_executable_script(
@@ -313,10 +319,14 @@ class TestValidateHookInstallation:
         settings_path.write_text("{}")
         install_hooks(tmp_path)
 
-        # Modify settings.json with wrong path
+        # Modify settings.json with wrong path for git commit hook
         with open(settings_path) as f:
             settings = json.load(f)
-        settings["hooks"]["PreCommit"] = "/wrong/path/to/script.sh"
+        # Find and modify the git commit hook in PreToolUse array
+        for hook in settings["hooks"]["PreToolUse"]:
+            if hook.get("matcher") == "Bash(git commit*)":
+                hook["hooks"][0]["command"] = "/wrong/path/to/script.sh"
+                break
         with open(settings_path, "w") as f:
             json.dump(settings, f)
 
