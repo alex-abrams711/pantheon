@@ -99,7 +99,7 @@ pantheon init --auto-integrate
 
 ### `pantheon integrate`
 
-Integrate DEV + QA agents with Spec Kit commands and install quality hooks.
+Integrate DEV + QA agents with Spec Kit commands, generate quality config, and install quality hooks.
 
 **Options:**
 - `--dry-run` - Preview changes without applying them
@@ -148,7 +148,7 @@ pantheon list
 
 ## Quality Discovery
 
-Pantheon automatically discovers quality commands for your project type:
+Pantheon automatically discovers quality commands during `pantheon integrate`:
 
 ### Supported Project Types
 - **Python**: pytest, ruff, mypy
@@ -158,9 +158,11 @@ Pantheon automatically discovers quality commands for your project type:
 
 ### Discovery Process
 1. Detects project type from files (package.json, pyproject.toml, go.mod)
-2. Extracts commands from plan.md if available
-3. Auto-discovers common commands if plan.md not found
-4. Generates `.pantheon/quality-config.json` with discovered commands
+2. Looks for plan.md in project root or specs/ subdirectories
+3. Extracts commands from plan.md if available
+4. Auto-discovers common commands if plan.md not found
+5. Generates `.pantheon/quality-config.json` with discovered commands
+6. Hooks use this config immediately after installation
 
 ### Example Quality Config
 ```json

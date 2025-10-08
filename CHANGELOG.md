@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Quality Config Generation in `pantheon integrate`**: Automatically creates `.pantheon/quality-config.json`
+  - Generated during `pantheon integrate` command, before hook installation
+  - Auto-discovers test, lint, and type-check commands from project structure
+  - Looks for plan.md in project root or specs/ subdirectories
+  - Falls back to auto-discovery if no plan.md found
+  - Displays discovered commands and project type to user
+  - Ensures hooks have quality commands available immediately after installation
 - **Orchestrator Code Gate Hook**: New hook prevents orchestrator from editing source code
   - `orchestrator-code-gate.sh` installed as PreToolUse Write/Edit hook
   - Allows: documentation files (tasks.md, README.md, CHANGELOG.md, docs/, .claude/)
