@@ -8,12 +8,13 @@ Pantheon provides production-ready agents that implement structured, quality-fir
 
 - 🎯 **Multi-Agent Quality Workflow**: DEV + QA agents with built-in validation loops
 - 🔍 **Auto Quality Discovery**: Detects project type and discovers test/lint/type commands
-- 🪝 **Quality Gate Hooks**: SubagentStop, PreCommit, and PhaseGate validation
+- 🪝 **Quality Gate Hooks**: SubagentStop, PreCommit, PhaseGate, and Orchestrator Code Gate
+- 🛡️ **Enforced Separation of Concerns**: Hooks prevent orchestrator from editing source code
 - ⚡ **Parallel Execution**: Run up to 3 DEV agents simultaneously for independent tasks
 - 🔧 **Spec Kit Integration**: Seamless integration with GitHub's Spec Kit framework
 - 🔄 **Safe Rollback**: Automatic backups and easy rollback capability
 - 📦 **Simple Distribution**: Install via `uvx` - no configuration needed
-- ✅ **Comprehensive Testing**: 109 tests with 92% coverage on core functionality
+- ✅ **Comprehensive Testing**: 111+ tests with 92% coverage on core functionality
 
 ## Quick Start
 

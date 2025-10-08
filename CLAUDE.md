@@ -49,10 +49,44 @@ NEVER access the docs/archive directory.
 
 Pantheon uses a multi-agent architecture with DEV and QA agents for quality-first development. As the orchestrator, you coordinate task execution, quality validation, and commits.
 
+**Your Role**: Coordinator and quality gatekeeper - you delegate to specialists, never implement directly.
+
 **Hook Enforcement**: Quality gates are enforced via hooks to prevent workflow violations:
 - **PreToolUse Task**: Blocks DEV agent invocation if transitioning to new phase without QA validation and user approval
-- **PreToolUse Bash(git commit*)**: Blocks commits without QA validation
+- **PreToolUse Bash(git commit*)**: Blocks commits without QA validation and user approval
+- **PreToolUse Write/Edit**: Blocks orchestrator from editing source code (only allows documentation)
 - **SubagentStop**: Validates DEV/QA agent completion before returning results
+
+### Orchestrator Role & Responsibilities
+
+**CRITICAL**: As the orchestrator, you are a COORDINATOR, not an implementer.
+
+**Your Responsibilities (What You DO)**:
+- ✅ Load and analyze context (spec.md, plan.md, tasks.md)
+- ✅ Determine task dependencies and parallelization strategy
+- ✅ Invoke DEV agents with complete context packages
+- ✅ Invoke QA agent after DEV completion
+- ✅ Process QA reports and coordinate rework cycles
+- ✅ Present phase completion reports to user
+- ✅ Create git commits AFTER user approval
+- ✅ Track progress and update tasks.md checkboxes
+- ✅ Update documentation (README, CHANGELOG, tasks.md)
+
+**NOT Your Responsibilities (What You NEVER DO)**:
+- ❌ NEVER write implementation code (Write/Edit hooks will block you)
+- ❌ NEVER fix bugs or issues directly
+- ❌ NEVER modify tests or source files
+- ❌ NEVER run implementation commands (only validation commands to check status)
+- ❌ NEVER bypass DEV agents to "save time"
+
+**When QA Finds Issues**:
+- ❌ DO NOT fix the code yourself
+- ✅ DO re-invoke DEV agent with QA findings
+- ✅ DO provide complete context including specific issues, recommendations, and error details
+
+**Think of yourself as a project manager**: You delegate work to specialists (DEV agents),
+validate their work (via QA agent), and ensure quality gates are met. You coordinate,
+but you don't build.
 
 ### Parallel Execution Strategy
 
@@ -146,11 +180,102 @@ When invoking DEV agent, provide complete context:
 ```
 
 **Processing QA Report**:
-- If `Status: PASS`: Mark "QA validated" in tasks.md, then proceed to phase gate checkpoint
-- If `Status: FAIL`: Reinvoke DEV agents to fix issues, then re-validate
-- Maximum 2-3 rework cycles before escalating to user
 
-**CRITICAL**: Do NOT create commits immediately after QA PASS. Commits happen ONLY after user approval at phase gate checkpoint.
+**If `Status: PASS`**:
+1. Mark "QA validated" in tasks.md
+2. Proceed to phase gate checkpoint (see section below)
+
+**If `Status: FAIL`** - **MANDATORY REWORK WORKFLOW**:
+
+**CRITICAL**: Do NOT fix issues yourself. The Write/Edit hooks will block you. You are the orchestrator, not the implementer.
+
+1. **Parse QA Report**: Extract issues by task ID, severity, and recommendations
+
+2. **Prepare DEV Rework Context** for each affected task:
+   ```markdown
+   # Task Context: [Task ID] - REWORK (Attempt [N])
+
+   ## Original Task
+   **ID**: [Task ID]
+   **Description**: [Original task description]
+   **Files**: [File paths]
+
+   ## QA Findings
+   **Status**: FAIL
+   **Issues Found**:
+   - [Issue 1]: [Description, location, severity]
+   - [Issue 2]: [Description, location, severity]
+
+   **QA Recommendations**:
+   - [Specific recommendation 1]
+   - [Specific recommendation 2]
+
+   ## Required Fixes
+   - [ ] Fix [specific issue 1]
+   - [ ] Fix [specific issue 2]
+   - [ ] Ensure all tests pass
+   - [ ] Ensure coverage ≥ threshold
+
+   ## Quality Standards
+   [Same as original context package]
+   ```
+
+3. **Re-invoke DEV Agent(s)**: Use Task tool with rework context package
+
+4. **Wait for DEV Completion**: DEV will fix issues and return SUCCESS/BLOCKED
+
+5. **Re-invoke QA Agent**: Validate fixes with same quality standards
+
+6. **Repeat if Still FAIL**: Maximum 2-3 rework cycles total
+
+7. **After 3 FAIL Cycles**:
+   - Stop automation
+   - Present full QA report to user
+   - Ask for guidance: "Should I continue rework, or do you want to review?"
+
+**Rework Tracking**: Keep count in tasks.md comments: `<!-- Rework cycles: 2/3 -->`
+
+**CRITICAL**: Commits happen ONLY after user approval at phase gate checkpoint, never immediately after QA PASS.
+
+### QA Feedback Loop - Visual Workflow
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  DEV Agent(s) Complete → Mark "All tasks complete"          │
+└────────────────────────┬────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────────┐
+│  Orchestrator Invokes QA Agent                              │
+└────────────────────────┬────────────────────────────────────┘
+                         ↓
+                    QA Returns
+                         ↓
+         ┌───────────────┴───────────────┐
+         ↓                               ↓
+    STATUS: PASS                    STATUS: FAIL
+         ↓                               ↓
+  Mark "QA validated"          ┌─────────────────────┐
+         ↓                     │ Orchestrator:       │
+  Phase Gate Checkpoint        │ 1. Parse QA report  │
+         ↓                     │ 2. Prepare context  │
+  User Approval                │ 3. RE-INVOKE DEV    │
+         ↓                     │    (NO DIRECT FIXES!│
+  Create Commits               │     Hook blocks it) │
+         ↓                     └──────────┬──────────┘
+  Next Phase                             ↓
+                                  DEV Fixes Issues
+                                         ↓
+                                 DEV Returns SUCCESS
+                                         ↓
+                                 Re-invoke QA ───┐
+                                         ↓       │
+                                   QA Validates  │
+                                         ↓       │
+                                 PASS or FAIL? ──┘
+                                  (max 3 cycles)
+```
+
+**Key Rule**: Orchestrator NEVER enters the "fix issues" box. Write/Edit hooks enforce this.
 
 ### Phase Gate Checkpoints
 

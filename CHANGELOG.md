@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Orchestrator Code Gate Hook**: New hook prevents orchestrator from editing source code
+  - `orchestrator-code-gate.sh` installed as PreToolUse Write/Edit hook
+  - Allows: documentation files (tasks.md, README.md, CHANGELOG.md, docs/, .claude/)
+  - Blocks: all source code, tests, and configuration files
+  - Enforces separation of concerns: orchestrator coordinates, DEV agents implement
+  - Error messages guide orchestrator to re-invoke DEV agents instead of fixing code
+  - Prevents issue where orchestrator fixes QA failures directly instead of delegating to DEV
+
+### Changed
+- **CLAUDE.md Orchestrator Role**: Added comprehensive role definition section
+  - Explicit "Your Responsibilities" (✅) and "NOT Your Responsibilities" (❌) lists
+  - Clear guidance: orchestrator coordinates, never implements
+  - Write/Edit hooks referenced as enforcement mechanism
+- **CLAUDE.md QA Validation Workflow**: Enhanced with explicit rework workflow
+  - 7-step mandatory rework process when QA returns FAIL
+  - DEV rework context package format with QA findings
+  - Rework cycle tracking (max 3 attempts)
+  - Visual workflow diagram showing orchestrator never enters "fix" box
+  - Prevents orchestrator from fixing code when QA finds issues
+- **hooks.py**: Updated to install orchestrator code gate hook
+  - Added orchestrator-code-gate.sh to hook_mappings
+  - Configured PreToolUse Write and PreToolUse Edit hooks
+  - Updated validation and uninstall logic
+- **README.md**: Updated features list
+  - Added "Enforced Separation of Concerns" feature
+  - Updated hook count to include Orchestrator Code Gate
+
 ### Fixed
 - **Phase Gate Enforcement**: Pre-commit hook now enforces BOTH QA validation AND user approval before commits
   - Added user validation check to `pre-commit-gate.sh` hook
