@@ -7,7 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2025-10-08
+
 ### Added
+- **`/pantheon:contextualize` Slash Command**: Intelligent LLM-based quality discovery for ANY language/framework
+  - Created `.claude/commands/pantheon/contextualize.md` slash command
+  - Analyzes project structure using LLM reasoning (not hardcoded rules)
+  - Supports unlimited languages: Python, Node.js, Go, Rust, Java, Kotlin, Ruby, PHP, .NET, Elixir, Dart, Swift, and more
+  - Detects modern tools automatically (Bun, Deno, uv, vitest, Biome, etc.)
+  - Handles monorepos and multi-language projects intelligently
+  - Reads README/docs for custom conventions
+  - Provides detailed reports with command rationale
+  - Extensible module design for future contextualization (architecture, dependencies, conventions)
+- **Manual Test Checklist**: Comprehensive testing guide for slash command
+  - `tests/manual/test-contextualize-command.md` with 12 test scenarios
+  - Covers diverse project types, edge cases, and error handling
+  - Cannot be automated (requires Claude Code environment)
 - **Quality Config Generation in `pantheon integrate`**: Automatically creates `.pantheon/quality-config.json`
   - Generated during `pantheon integrate` command, before hook installation
   - Auto-discovers test, lint, and type-check commands from project structure
@@ -24,6 +39,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Prevents issue where orchestrator fixes QA failures directly instead of delegating to DEV
 
 ### Changed
+- **Quality Discovery**: REMOVED entire `src/pantheon/quality/` module
+  - Quality discovery now exclusively through `/pantheon:contextualize` slash command
+  - Removed discovery.py, config.py, and all Python-based discovery logic
+  - `pantheon integrate` no longer generates quality-config.json
+  - Users must use `/pantheon:contextualize` in Claude Code for quality config generation
+- **CLI integrate command**: Removed quality config generation
+  - No longer generates .pantheon/quality-config.json during integration
+  - Added reminder to use `/pantheon:contextualize` slash command
+  - Updated dry-run output to reflect removal
+  - Integration still installs quality hooks and updates CLAUDE.md
+- **Tests**: Deleted quality discovery test files
+  - Removed `tests/contract/test_quality_config.py` (22 tests)
+  - Removed `tests/contract/test_quality_discovery.py` (8 tests)
+  - Removed `tests/integration/test_quality_discovery_e2e.py` (7 tests)
+  - Updated `test_qa_workflow_e2e.py` to remove quality module imports
+- **README.md**: Updated to reflect quality module removal
+  - Emphasizes `/pantheon:contextualize` as ONLY method for quality discovery
+  - `pantheon integrate` no longer auto-generates quality config
+  - Updated integration workflow to direct users to slash command
 - **CLAUDE.md Orchestrator Role**: Added comprehensive role definition section
   - Explicit "Your Responsibilities" (✅) and "NOT Your Responsibilities" (❌) lists
   - Clear guidance: orchestrator coordinates, never implements
@@ -38,9 +72,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added orchestrator-code-gate.sh to hook_mappings
   - Configured PreToolUse Write and PreToolUse Edit hooks
   - Updated validation and uninstall logic
-- **README.md**: Updated features list
-  - Added "Enforced Separation of Concerns" feature
-  - Updated hook count to include Orchestrator Code Gate
+
+### Removed
+- **Entire `src/pantheon/quality/` module** (~500 lines total)
+  - `discovery.py` - quality command discovery module
+  - `config.py` - quality config generation and loading
+  - `__init__.py` and `py.typed` marker files
+- **Quality discovery test files** (37 tests total)
+  - `tests/contract/test_quality_config.py` (22 tests)
+  - `tests/contract/test_quality_discovery.py` (8 tests)
+  - `tests/integration/test_quality_discovery_e2e.py` (7 tests)
+- **Quality config generation from CLI**
+  - Removed from `pantheon integrate` command
+  - No longer auto-generates .pantheon/quality-config.json
+  - All references to `generate_quality_config()` and `load_quality_config()`
 
 ### Fixed
 - **Phase Gate Enforcement**: Pre-commit hook now enforces BOTH QA validation AND user approval before commits
@@ -54,6 +99,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Commit Strategy: Clarified that BOTH QA validation AND user approval are required
   - Removed ambiguity that allowed orchestrator to commit before user approval
 - **README.md Commit Strategy**: Updated to reflect correct workflow requiring user approval
+
+### Migration
+**BREAKING CHANGE**: Quality module has been completely removed.
+
+**Action Required**:
+1. The `src/pantheon/quality/` module no longer exists
+2. `pantheon integrate` no longer auto-generates quality-config.json
+3. **You MUST use `/pantheon:contextualize` in Claude Code to generate quality config**
+4. Any code importing from `pantheon.quality` will fail - update imports
+5. If you have existing quality-config.json, it will continue to work (hooks read it directly)
+
+**New Workflow**:
+1. Run `pantheon integrate` to install hooks and Spec Kit integration
+2. Open Claude Code and run `/pantheon:contextualize` to generate quality config
+3. Proceed with normal development using `/implement`
 
 ## [0.2.0] - 2025-10-06
 
@@ -193,6 +253,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Development setup guide
 - Contributing guidelines
 
+[0.3.0]: https://github.com/alex-abrams711/pantheon/releases/tag/v0.3.0
 [0.2.0]: https://github.com/alex-abrams711/pantheon/releases/tag/v0.2.0
 [0.1.1]: https://github.com/alex-abrams711/pantheon/releases/tag/v0.1.1
 [0.1.0]: https://github.com/alex-abrams711/pantheon/releases/tag/v0.1.0

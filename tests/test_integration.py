@@ -75,9 +75,7 @@ class TestFullIntegrationWorkflow:
         # Should be identical (no duplicate sections)
         assert first_result == second_result
 
-    def test_integration_with_customized_commands(
-        self, mock_spec_kit_project: Path
-    ):
+    def test_integration_with_customized_commands(self, mock_spec_kit_project: Path):
         """Test integration preserves custom content in commands."""
         os.chdir(mock_spec_kit_project)
 

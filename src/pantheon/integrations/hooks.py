@@ -53,7 +53,6 @@ def install_hooks(project_root: Path) -> dict[str, bool]:
         ("subagent-validation.sh", "SubagentStop"),
         ("pre-commit-gate.sh", "PreCommit"),
         ("phase-transition-gate.sh", "PhaseTransitionGate"),
-        ("orchestrator-code-gate.sh", "OrchestratorCodeGate"),
     ]
 
     results: dict[str, bool] = {}
@@ -109,9 +108,7 @@ def uninstall_hooks(project_root: Path) -> bool:
     # Validate .claude/ directory exists
     claude_dir = project_root / ".claude"
     if not claude_dir.exists():
-        raise FileNotFoundError(
-            f".claude/ directory not found in {project_root}"
-        )
+        raise FileNotFoundError(f".claude/ directory not found in {project_root}")
 
     # Remove hook entries from settings.json
     _remove_hooks_from_settings(project_root)
@@ -161,8 +158,6 @@ def validate_hook_installation(project_root: Path) -> dict[str, str]:
         ("subagent-validation.sh", "SubagentStop", "SubagentStop", ""),
         ("pre-commit-gate.sh", "PreCommit", "PreToolUse", "Bash(git commit*)"),
         ("phase-transition-gate.sh", "PhaseTransitionGate", "PreToolUse", "Task"),
-        ("orchestrator-code-gate.sh", "OrchestratorCodeGate-Write", "PreToolUse", "Write"),
-        ("orchestrator-code-gate.sh", "OrchestratorCodeGate-Edit", "PreToolUse", "Edit"),
     ]
 
     for script_filename, hook_name, settings_key, expected_matcher in hook_checks:
@@ -207,8 +202,7 @@ def validate_hook_installation(project_root: Path) -> dict[str, str]:
         # Verify the hook command points to correct script
         hook_commands = matching_hook.get("hooks", [])
         has_correct_path = any(
-            script_filename in cmd.get("command", "")
-            for cmd in hook_commands
+            script_filename in cmd.get("command", "") for cmd in hook_commands
         )
         if not has_correct_path:
             results[hook_name] = f"Incorrect path in {settings_key} hook"
@@ -251,15 +245,17 @@ def _update_settings_json(project_root: Path, hooks_dir: Path) -> None:
     )
 
     if not subagent_stop_exists:
-        settings["hooks"]["SubagentStop"].append({
-            "matcher": "",
-            "hooks": [
-                {
-                    "type": "command",
-                    "command": str(rel_hooks_dir / "subagent-validation.sh")
-                }
-            ]
-        })
+        settings["hooks"]["SubagentStop"].append(
+            {
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": str(rel_hooks_dir / "subagent-validation.sh"),
+                    }
+                ],
+            }
+        )
 
     # Add PreToolUse Task hook for phase transitions
     if "PreToolUse" not in settings["hooks"]:
@@ -273,15 +269,17 @@ def _update_settings_json(project_root: Path, hooks_dir: Path) -> None:
     )
 
     if not task_hook_exists:
-        settings["hooks"]["PreToolUse"].append({
-            "matcher": "Task",
-            "hooks": [
-                {
-                    "type": "command",
-                    "command": str(rel_hooks_dir / "phase-transition-gate.sh")
-                }
-            ]
-        })
+        settings["hooks"]["PreToolUse"].append(
+            {
+                "matcher": "Task",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": str(rel_hooks_dir / "phase-transition-gate.sh"),
+                    }
+                ],
+            }
+        )
 
     # Add PreToolUse for git commit validation (array format with matcher)
     if "PreToolUse" not in settings["hooks"]:
@@ -295,51 +293,17 @@ def _update_settings_json(project_root: Path, hooks_dir: Path) -> None:
     )
 
     if not git_commit_hook_exists:
-        settings["hooks"]["PreToolUse"].append({
-            "matcher": "Bash(git commit*)",
-            "hooks": [
-                {
-                    "type": "command",
-                    "command": str(rel_hooks_dir / "pre-commit-gate.sh")
-                }
-            ]
-        })
-
-    # Add PreToolUse Write hook for orchestrator code gate
-    write_hook_exists = any(
-        hook.get("matcher") == "Write"
-        for hook in settings["hooks"]["PreToolUse"]
-        if isinstance(hook, dict)
-    )
-
-    if not write_hook_exists:
-        settings["hooks"]["PreToolUse"].append({
-            "matcher": "Write",
-            "hooks": [
-                {
-                    "type": "command",
-                    "command": str(rel_hooks_dir / "orchestrator-code-gate.sh")
-                }
-            ]
-        })
-
-    # Add PreToolUse Edit hook for orchestrator code gate
-    edit_hook_exists = any(
-        hook.get("matcher") == "Edit"
-        for hook in settings["hooks"]["PreToolUse"]
-        if isinstance(hook, dict)
-    )
-
-    if not edit_hook_exists:
-        settings["hooks"]["PreToolUse"].append({
-            "matcher": "Edit",
-            "hooks": [
-                {
-                    "type": "command",
-                    "command": str(rel_hooks_dir / "orchestrator-code-gate.sh")
-                }
-            ]
-        })
+        settings["hooks"]["PreToolUse"].append(
+            {
+                "matcher": "Bash(git commit*)",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": str(rel_hooks_dir / "pre-commit-gate.sh"),
+                    }
+                ],
+            }
+        )
 
     # Write updated settings
     with open(settings_path, "w") as f:

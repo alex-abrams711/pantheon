@@ -81,7 +81,7 @@ def mock_spec_kit_project_no_frontmatter(
     )
 
     (commands_dir / "tasks.md").write_text(
-        "# /tasks - Generate Task List\n\n" "Generate actionable tasks.\n"
+        "# /tasks - Generate Task List\n\nGenerate actionable tasks.\n"
     )
 
     return mock_claude_dir.parent

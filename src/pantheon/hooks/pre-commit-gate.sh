@@ -14,7 +14,7 @@ set -euo pipefail
 
 echo "🚦 Running pre-commit quality gates..."
 
-# Check if tasks.md exists and validate QA checkbox
+# Check if tasks.md exists and validate QA and User validation checkboxes
 TASKS_FILE="tasks.md"
 if [ -f "$TASKS_FILE" ]; then
     # Find the current phase (first phase with unchecked "All tasks complete")

@@ -54,9 +54,9 @@ class TestHookInstallationE2E:
             # Verify all scripts are executable
             for script in expected_scripts:
                 script_path = hooks_dir / script
-                assert os.access(
-                    script_path, os.X_OK
-                ), f"Script not executable: {script}"
+                assert os.access(script_path, os.X_OK), (
+                    f"Script not executable: {script}"
+                )
 
             # Verify .claude/settings.json updated with hook configuration
             settings_path = claude_dir / "settings.json"

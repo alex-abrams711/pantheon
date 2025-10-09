@@ -121,9 +121,7 @@ class TestInstallHooks:
         assert settings["another"] == 123
         assert "hooks" in settings  # New hooks added
 
-    def test_install_returns_success_status_for_each_hook(
-        self, tmp_path: Path
-    ) -> None:
+    def test_install_returns_success_status_for_each_hook(self, tmp_path: Path) -> None:
         """Contract: returns dict with success status for each hook."""
         # Setup
         (tmp_path / ".claude").mkdir()

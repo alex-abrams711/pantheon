@@ -257,46 +257,41 @@ def validate_integration(project_root: Optional[Path] = None) -> ValidationResul
 
 
 # Integration directives to be inserted into Spec Kit commands
-IMPLEMENT_DIRECTIVE = """## Agent Integration
+IMPLEMENT_DIRECTIVE = """
+## Sub-Agent Integration
 
-**Workflow**: DEV agents → QA validation (MANDATORY) → Commits
+**Workflow**: DEV agents → QA validation → Repeat
 
 ### 1. Execute Tasks (DEV Agents)
 
 For each task in tasks.md:
 - Invoke DEV agent with context: Task ID, files, acceptance criteria,
   quality standards from plan.md
-- For parallel tasks marked `[P]`: Invoke up to 3 DEV agents in SINGLE message
+- For parallel tasks marked `[P]`: Invoke agents in parallel in a SINGLE message
 
-### 2. Validate Quality (QA Agent - REQUIRED)
+### 2. Validate Quality (QA Agent)
 
-**After ALL DEV agents complete, BEFORE any commits**:
+**After EACH DEV agents completes**:
 
 1. **DO NOT commit yet**
-2. Invoke QA agent with ALL completed task IDs:
+2. Invoke QA agent with completed task ID:
    ```
    Use Task tool:
      subagent_type: "qa"
-     description: "Validate tasks: [IDs]"
-     prompt: [QA context - tasks, quality standards, Definition of Done]
+     description: "Validate task: [ID]"
+     prompt: [QA context - task, quality standards, Definition of Done]
    ```
 3. Process QA report:
-   - **PASS**: Proceed to commits
-   - **FAIL**: Fix issues with DEV agents, re-validate (max 2-3 cycles)
-
-**CRITICAL**: NO commits until QA reports PASS.
-
-### 3. Create Commits (After QA PASS Only)
-
-- Include task IDs and quality metrics from QA report in commit message
-- Orchestrator creates commits (agents never commit)
+   - **PASS**: Present results to user
+   - **FAIL**: Re-execute the failed task with another DEV agent, providing
+    updated context based on the QA Report
 
 See `.claude/agents/dev.md` and `.claude/agents/qa.md` for details.
 
 ---
 """
 
-PLAN_DIRECTIVE = """## Quality Standards (Required for DEV Integration)
+PLAN_DIRECTIVE = """## Quality Standards
 
 Include in plan.md output:
 - Lint command (e.g., `npm run lint`)
@@ -309,9 +304,9 @@ If commands cannot be auto-discovered, mark as "CLARIFICATION REQUIRED".
 ---
 """
 
-TASKS_DIRECTIVE = """## Task Format (Required for DEV Integration)
+TASKS_DIRECTIVE = """## Task Format
 
-### Phase-Level Checkboxes (Required for Workflow Enforcement)
+### Phase-Level Checkboxes
 
 Each phase MUST include checkboxes immediately after the phase header:
 
@@ -323,15 +318,6 @@ Each phase MUST include checkboxes immediately after the phase header:
 
 - [ ] **T001** [Task Description]
 ```
-
-**Checkbox Workflow**:
-- `All tasks complete`: Auto-checked when all task checkboxes in phase are [x]
-- `QA validated`: Checked by orchestrator after QA agent returns PASS
-- `User validated`: Checked when user types "yes" at phase gate
-
-**Hook Enforcement**: PreToolUse Task hook blocks DEV agent invocation if:
-- Transitioning to new phase without previous phase `QA validated`
-- Transitioning to new phase without previous phase `User validated`
 
 ### Task Format
 
@@ -707,17 +693,22 @@ def rollback_integration(project_root: Optional[Path] = None) -> RollbackResult:
 
 # Multi-Agent Workflow Orchestration content to be added to CLAUDE.md
 ORCHESTRATION_SECTION = """
-## Multi-Agent Workflow Orchestration
+## Development Workflow
 
 ### Overview
 
-Pantheon uses DEV and QA agents for quality-first development.
-Workflow: Execute tasks → QA validation (MANDATORY) → Commits → User approval
+Uses DEV and QA agents for quality-first development.
+Workflow: Implement tasks using DEV agents → Validate task implementation using QA agents → Iterate → Present results to user
+
+_When to use each agent?_
+
+- DEV - Use this agent when you need to implement a specific feature, fix a bug, or write code
+- QA - Use this agent when you need to validate code quality after development work is complete
 
 **Critical Rules**:
-1. QA validation is MANDATORY after ALL DEV agents complete
-2. NO commits until QA reports PASS status
-3. Orchestrator creates commits (agents never commit)
+1. DEV agent is responsible for implementing tasks and self-verifying
+2. QA agent is responsible for double-checking and verifying DEV's results
+3. Main agent is responsible for managing workflow (NOT ALLOWED to work on tasks or verification)
 
 ### DEV Agent Context Package
 
@@ -750,12 +741,10 @@ Workflow: Execute tasks → QA validation (MANDATORY) → Commits → User appro
 
 ### QA Agent Context Package
 
-**When**: AFTER all DEV agents complete, BEFORE commits
-
 ```markdown
 # QA Validation Context
 
-## Tasks to Validate
+## Task to Validate
 - **T001**: [Task description]
   - Files: [file paths]
 
@@ -782,14 +771,12 @@ Workflow: Execute tasks → QA validation (MANDATORY) → Commits → User appro
 ```
 
 **Processing QA Report**:
-- **PASS**: Create commits
-- **FAIL**: Fix with DEV agents, re-validate (max 2-3 cycles)
+- **PASS**: Present results to user
+- **FAIL**: Re-execute the failed task with another DEV agent, providing updated context based on the QA Report
 
 ### Parallel Execution
 
-For tasks marked `[P]` in tasks.md:
-- Invoke up to 3 DEV agents in SINGLE message
-- Wait for ALL to complete before QA validation
+For tasks marked `[P]` in tasks.md, invoke parallel agents in SINGLE message
 
 ### Phase Gate Checkpoints
 
@@ -814,35 +801,22 @@ Each phase has three checkboxes that MUST be updated:
 1. **After all DEV agents complete** → Check "All tasks complete":
    ```bash
    # Update tasks.md
-   sed -i '' '/^## Phase 3.1/,/^## Phase/ \
-     s/- \\[ \\] All tasks complete/- [x] All tasks complete/' \
-     tasks.md
+   sed -i '' '/^## Phase 3.1/,/^## Phase/      s/- \[ \] All tasks complete/- [x] All tasks complete/'      tasks.md
    ```
 
 2. **After QA agent returns PASS** → Check "QA validated":
    ```bash
    # Update tasks.md with timestamp
    DATE=$(date +%Y-%m-%d)
-   sed -i '' '/^## Phase 3.1/,/^## Phase/ \
-     s/- \\[ \\] QA validated/- [x] QA validated (PASS - '"$DATE"')/' \
-     tasks.md
+   sed -i '' '/^## Phase 3.1/,/^## Phase/      s/- \[ \] QA validated/- [x] QA validated (PASS - '"$DATE"')/'      tasks.md
    ```
 
 3. **After user types "yes"** → Check "User validated":
    ```bash
    # Update tasks.md with timestamp
    DATE=$(date +%Y-%m-%d)
-   sed -i '' '/^## Phase 3.1/,/^## Phase/ \
-     s/- \\[ \\] User validated/- [x] User validated ('"$DATE"')/' \
-     tasks.md
+   sed -i '' '/^## Phase 3.1/,/^## Phase/      s/- \[ \] User validated/- [x] User validated ('"$DATE"')/'      tasks.md
    ```
-
-**Hook Enforcement**:
-- **PreToolUse Task** hook BLOCKS invoking DEV agents for new phase
-  if previous phase missing QA validated or User validated
-- **PreToolUse Bash(git commit*)** hook BLOCKS commits if QA not
-  validated
-- **SubagentStop** hook validates DEV/QA agent completion
 
 ### Commit Strategy
 
@@ -851,12 +825,6 @@ Format:
 [type]: [Task IDs] [Brief description]
 
 [Detailed changes]
-
-Quality metrics:
-- Tests: [passing]/[total] passing
-- Coverage: [percentage]% branches
-- Lint: 0 errors
-- Type: 0 errors
 ```
 """
 

@@ -126,18 +126,6 @@ Return results to calling agent with:
 
 **Issues/Blockers**: Any problems encountered (if applicable)
 
-**Next Steps**: Recommendations or required follow-up (if applicable)
-
-The calling agent will handle commits, user communication, and orchestration.
-
-## Iteration Protocol
-
-If calling agent provides feedback indicating fixes or additional work:
-- Analyze feedback and requirements carefully
-- Either reopen previously completed subtasks or create new subtasks
-- Return to implementation workflow with updated context
-- Apply same quality-focused approach
-
 ## Quality Standards Detail
 
 **Testing:**

@@ -7,7 +7,7 @@ Pantheon provides production-ready agents that implement structured, quality-fir
 ## Features
 
 - 🎯 **Multi-Agent Quality Workflow**: DEV + QA agents with built-in validation loops
-- 🔍 **Auto Quality Discovery**: Detects project type and discovers test/lint/type commands
+- 🔍 **Intelligent Quality Discovery**: LLM-based discovery for ANY language/framework via `/pantheon:contextualize`
 - 🪝 **Quality Gate Hooks**: SubagentStop, PreCommit, PhaseGate, and Orchestrator Code Gate
 - 🛡️ **Enforced Separation of Concerns**: Hooks prevent orchestrator from editing source code
 - ⚡ **Parallel Execution**: Run up to 3 DEV agents simultaneously for independent tasks
@@ -148,37 +148,74 @@ pantheon list
 
 ## Quality Discovery
 
-Pantheon automatically discovers quality commands during `pantheon integrate`:
+Pantheon intelligently discovers quality commands for your project using the `/pantheon:contextualize` slash command.
 
-### Supported Project Types
-- **Python**: pytest, ruff, mypy
-- **Node.js**: npm test, eslint, tsc
-- **Go**: go test, golangci-lint
-- **Ruby**: rspec, rubocop
+### Intelligent Discovery (Recommended)
 
-### Discovery Process
-1. Detects project type from files (package.json, pyproject.toml, go.mod)
-2. Looks for plan.md in project root or specs/ subdirectories
-3. Extracts commands from plan.md if available
-4. Auto-discovers common commands if plan.md not found
-5. Generates `.pantheon/quality-config.json` with discovered commands
-6. Hooks use this config immediately after installation
+In Claude Code, run:
+```
+/pantheon:contextualize
+```
+
+This uses LLM-based analysis to discover quality commands for **ANY language and framework**:
+- Analyzes project structure (config files, package managers, build tools)
+- Checks plan.md for explicit commands (if using Spec Kit)
+- Understands project conventions from README/docs
+- Detects modern tools automatically (Bun, Deno, uv, vitest, Biome, etc.)
+- Handles monorepos and multi-language projects
+- Works with: Python, Node.js, Go, Rust, Java, Kotlin, Ruby, PHP, .NET, Elixir, Dart, Swift, and more
+
+**Example output:**
+```
+✓ Project analyzed successfully
+
+Project Type: Node.js (TypeScript)
+Framework: React (Vite)
+Package Manager: pnpm
+
+Discovered Quality Commands:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+test         → pnpm test
+             Rationale: Found "test" script using vitest
+
+lint         → pnpm run lint
+             Rationale: Found "lint" script using biome
+
+type_check   → pnpm run type-check
+             Rationale: Found "type-check" script using tsc
+
+coverage     → pnpm test -- --coverage
+             Rationale: Vitest supports --coverage flag
+
+build        → pnpm run build
+             Rationale: Found "build" script using vite
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Config written to: .pantheon/quality-config.json
+```
+
+### Without Contextualization
+
+If you don't use the slash command, `pantheon integrate` will only parse explicit quality commands from plan.md (if present). Without plan.md, quality commands will be empty. For best results and automatic discovery, use `/pantheon:contextualize`.
 
 ### Example Quality Config
 ```json
 {
   "version": "1.0",
   "project_type": "python",
+  "framework": "fastapi",
   "commands": {
     "test": "pytest tests/ -v",
     "lint": "ruff check src/ tests/",
     "type_check": "mypy src/ --strict",
-    "coverage": "pytest --cov=src --cov-report=term-missing"
+    "coverage": "pytest --cov=src --cov-report=term-missing",
+    "build": "uv build"
   },
   "thresholds": {
     "coverage_branches": 80
   },
-  "discovery_source": "plan.md"
+  "discovery_source": "intelligent",
+  "contextualized_at": "2025-10-08T12:34:56Z"
 }
 ```
 

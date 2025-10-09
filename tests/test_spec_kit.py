@@ -73,9 +73,7 @@ class TestCreateBackup:
         """Test that backup preserves file content."""
         os.chdir(mock_spec_kit_project)
 
-        original_content = (
-            Path(".claude/commands/implement.md").read_text()
-        )
+        original_content = Path(".claude/commands/implement.md").read_text()
 
         backup_dir = create_backup()
         backup_content = (backup_dir / "implement.md").read_text()
@@ -161,9 +159,7 @@ class TestRestoreFiles:
 class TestValidateIntegration:
     """Tests for validate_integration function."""
 
-    def test_validate_successful_integration(
-        self, mock_spec_kit_project: Path
-    ):
+    def test_validate_successful_integration(self, mock_spec_kit_project: Path):
         """Test validation of successfully integrated files."""
         os.chdir(mock_spec_kit_project)
 
