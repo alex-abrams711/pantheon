@@ -208,11 +208,7 @@ def validate_integration(project_root: Optional[Path] = None) -> ValidationResul
     if project_root is None:
         project_root = Path.cwd()
 
-    results: ValidationResult = {
-        "valid": True,
-        "errors": [],
-        "files_checked": []
-    }
+    results: ValidationResult = {"valid": True, "errors": [], "files_checked": []}
 
     # Get command files based on detected format
     command_files = _get_command_files(project_root)
@@ -226,7 +222,7 @@ def validate_integration(project_root: Optional[Path] = None) -> ValidationResul
     expected_sections = {
         "implement": "## Agent Integration",
         "plan": "## Quality Standards (Required for DEV Integration)",
-        "tasks": "### Phase-Level Checkboxes (Required for Workflow Enforcement)"
+        "tasks": "### Phase-Level Checkboxes (Required for Workflow Enforcement)",
     }
 
     for command_name, filepath in command_files.items():
@@ -358,19 +354,19 @@ def integrate_implement_command(project_root: Optional[Path] = None) -> bool:
         return True  # Already integrated
 
     # Insert after YAML frontmatter or at beginning if no frontmatter
-    lines = content.split('\n')
+    lines = content.split("\n")
     insert_index = 0
     in_frontmatter = False
     frontmatter_end_found = False
 
     for i, line in enumerate(lines):
         # Detect start of YAML frontmatter
-        if i == 0 and line.strip() == '---':
+        if i == 0 and line.strip() == "---":
             in_frontmatter = True
             continue
 
         # Detect end of YAML frontmatter
-        if in_frontmatter and line.strip() == '---':
+        if in_frontmatter and line.strip() == "---":
             insert_index = i + 1
             frontmatter_end_found = True
             break
@@ -380,9 +376,9 @@ def integrate_implement_command(project_root: Optional[Path] = None) -> bool:
         insert_index = 0
 
     # Insert directive at the determined position
-    lines.insert(insert_index, '\n' + IMPLEMENT_DIRECTIVE)
+    lines.insert(insert_index, "\n" + IMPLEMENT_DIRECTIVE)
 
-    filepath.write_text('\n'.join(lines))
+    filepath.write_text("\n".join(lines))
     return True
 
 
@@ -411,19 +407,19 @@ def integrate_plan_command(project_root: Optional[Path] = None) -> bool:
         return True  # Already integrated
 
     # Insert after YAML frontmatter or at beginning if no frontmatter
-    lines = content.split('\n')
+    lines = content.split("\n")
     insert_index = 0
     in_frontmatter = False
     frontmatter_end_found = False
 
     for i, line in enumerate(lines):
         # Detect start of YAML frontmatter
-        if i == 0 and line.strip() == '---':
+        if i == 0 and line.strip() == "---":
             in_frontmatter = True
             continue
 
         # Detect end of YAML frontmatter
-        if in_frontmatter and line.strip() == '---':
+        if in_frontmatter and line.strip() == "---":
             insert_index = i + 1
             frontmatter_end_found = True
             break
@@ -433,9 +429,9 @@ def integrate_plan_command(project_root: Optional[Path] = None) -> bool:
         insert_index = 0
 
     # Insert directive at the determined position
-    lines.insert(insert_index, '\n' + PLAN_DIRECTIVE)
+    lines.insert(insert_index, "\n" + PLAN_DIRECTIVE)
 
-    filepath.write_text('\n'.join(lines))
+    filepath.write_text("\n".join(lines))
     return True
 
 
@@ -464,19 +460,19 @@ def integrate_tasks_command(project_root: Optional[Path] = None) -> bool:
         return True  # Already integrated
 
     # Insert after YAML frontmatter or at beginning if no frontmatter
-    lines = content.split('\n')
+    lines = content.split("\n")
     insert_index = 0
     in_frontmatter = False
     frontmatter_end_found = False
 
     for i, line in enumerate(lines):
         # Detect start of YAML frontmatter
-        if i == 0 and line.strip() == '---':
+        if i == 0 and line.strip() == "---":
             in_frontmatter = True
             continue
 
         # Detect end of YAML frontmatter
-        if in_frontmatter and line.strip() == '---':
+        if in_frontmatter and line.strip() == "---":
             insert_index = i + 1
             frontmatter_end_found = True
             break
@@ -486,9 +482,9 @@ def integrate_tasks_command(project_root: Optional[Path] = None) -> bool:
         insert_index = 0
 
     # Insert directive at the determined position
-    lines.insert(insert_index, '\n' + TASKS_DIRECTIVE)
+    lines.insert(insert_index, "\n" + TASKS_DIRECTIVE)
 
-    filepath.write_text('\n'.join(lines))
+    filepath.write_text("\n".join(lines))
     return True
 
 
@@ -516,7 +512,7 @@ def integrate_spec_kit(project_root: Optional[Path] = None) -> IntegrationResult
         "backup_dir": None,
         "files_modified": [],
         "errors": [],
-        "validation": {"valid": False, "errors": [], "files_checked": []}
+        "validation": {"valid": False, "errors": [], "files_checked": []},
     }
 
     # Step 1: Verify prerequisites
@@ -620,11 +616,7 @@ def restore_files(
     if project_root is None:
         project_root = Path.cwd()
 
-    result: RestoreResult = {
-        "success": False,
-        "files_restored": [],
-        "errors": []
-    }
+    result: RestoreResult = {"success": False, "files_restored": [], "errors": []}
 
     if not backup_dir.exists():
         result["errors"].append(f"Backup directory not found: {backup_dir}")
@@ -669,7 +661,7 @@ def rollback_integration(project_root: Optional[Path] = None) -> RollbackResult:
         "success": False,
         "backup_dir": None,
         "files_restored": [],
-        "errors": []
+        "errors": [],
     }
 
     # Find latest backup
@@ -692,23 +684,27 @@ def rollback_integration(project_root: Optional[Path] = None) -> RollbackResult:
 
 
 # Multi-Agent Workflow Orchestration content to be added to CLAUDE.md
-ORCHESTRATION_SECTION = """
+ORCHESTRATION_SECTION = r"""
 ## Development Workflow
 
 ### Overview
 
 Uses DEV and QA agents for quality-first development.
-Workflow: Implement tasks using DEV agents → Validate task implementation using QA agents → Iterate → Present results to user
+Workflow: Implement tasks using DEV agents → Validate task implementation using
+QA agents → Iterate → Present results to user
 
 _When to use each agent?_
 
-- DEV - Use this agent when you need to implement a specific feature, fix a bug, or write code
-- QA - Use this agent when you need to validate code quality after development work is complete
+- DEV - Use this agent when you need to implement a specific feature, fix a bug,
+  or write code
+- QA - Use this agent when you need to validate code quality after development
+  work is complete
 
 **Critical Rules**:
 1. DEV agent is responsible for implementing tasks and self-verifying
 2. QA agent is responsible for double-checking and verifying DEV's results
-3. Main agent is responsible for managing workflow (NOT ALLOWED to work on tasks or verification)
+3. Main agent is responsible for managing workflow (NOT ALLOWED to work on
+   tasks or verification)
 
 ### DEV Agent Context Package
 
@@ -772,7 +768,8 @@ _When to use each agent?_
 
 **Processing QA Report**:
 - **PASS**: Present results to user
-- **FAIL**: Re-execute the failed task with another DEV agent, providing updated context based on the QA Report
+- **FAIL**: Re-execute the failed task with another DEV agent, providing
+  updated context based on the QA Report
 
 ### Parallel Execution
 
@@ -801,21 +798,24 @@ Each phase has three checkboxes that MUST be updated:
 1. **After all DEV agents complete** → Check "All tasks complete":
    ```bash
    # Update tasks.md
-   sed -i '' '/^## Phase 3.1/,/^## Phase/      s/- \[ \] All tasks complete/- [x] All tasks complete/'      tasks.md
+   sed -i '' '/^## Phase 3.1/,/^## Phase/ \
+     s/- \[ \] All tasks complete/- [x] All tasks complete/' tasks.md
    ```
 
 2. **After QA agent returns PASS** → Check "QA validated":
    ```bash
    # Update tasks.md with timestamp
    DATE=$(date +%Y-%m-%d)
-   sed -i '' '/^## Phase 3.1/,/^## Phase/      s/- \[ \] QA validated/- [x] QA validated (PASS - '"$DATE"')/'      tasks.md
+   sed -i '' '/^## Phase 3.1/,/^## Phase/ \
+     s/- \[ \] QA validated/- [x] QA validated (PASS - '"$DATE"')/' tasks.md
    ```
 
 3. **After user types "yes"** → Check "User validated":
    ```bash
    # Update tasks.md with timestamp
    DATE=$(date +%Y-%m-%d)
-   sed -i '' '/^## Phase 3.1/,/^## Phase/      s/- \[ \] User validated/- [x] User validated ('"$DATE"')/'      tasks.md
+   sed -i '' '/^## Phase 3.1/,/^## Phase/ \
+     s/- \[ \] User validated/- [x] User validated ('"$DATE"')/' tasks.md
    ```
 
 ### Commit Strategy
