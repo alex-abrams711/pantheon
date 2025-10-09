@@ -137,15 +137,6 @@ Rollback to the most recent backup and uninstall quality hooks.
 pantheon rollback --force
 ```
 
-### `pantheon list`
-
-List available agents and their installation status.
-
-**Example:**
-```bash
-pantheon list
-```
-
 ## Quality Discovery
 
 Pantheon intelligently discovers quality commands for your project using the `/pantheon:contextualize` slash command.
@@ -319,15 +310,14 @@ Delegates task execution to DEV and QA agents:
 
 ## Architecture
 
-Pantheon uses Claude Code's sub-agent architecture:
+Pantheon uses a multi-agent architecture with three key roles:
+- **Orchestrator**: Coordinates workflow, creates commits (main Claude agent)
+- **DEV Agent**: Implements features with TDD approach
+- **QA Agent**: Validates quality independently
 
-- **Separate Context Windows**: DEV and QA operate independently, preserving main conversation
-- **Stateless Invocation**: Each agent call is fresh, state managed by orchestrator
-- **Tool Scoping**:
-  - DEV has implementation tools (Read, Write, Edit, Bash)
-  - QA has validation tools (Read, Bash, Glob, Grep, Browser, Playwright)
-- **Quality Focus**: Built-in verification loops and quality gates ensure standards are met
-- **Hook System**: SubagentStop, PreCommit, and PhaseGate hooks validate work automatically
+Quality is enforced through **defense in depth**: agent self-checks → hooks → independent QA → final hooks.
+
+**For detailed architecture documentation**, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 
 ## Safety & Rollback
 

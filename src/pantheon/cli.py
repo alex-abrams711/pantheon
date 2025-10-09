@@ -108,7 +108,7 @@ def integrate(dry_run: bool) -> None:
     NOTE: Quality config (.pantheon/quality-config.json) should be generated using the
     /pantheon:contextualize slash command in Claude Code for intelligent discovery.
     """
-    from pantheon.integrations.hooks import install_hooks, validate_hook_installation
+    from pantheon.integrations.claude import install_hooks, validate_hook_installation
     from pantheon.integrations.spec_kit import integrate_spec_kit
 
     cwd = Path.cwd()
@@ -243,7 +243,7 @@ def rollback(force: bool) -> None:
     Restores Spec Kit command files from the most recent integration backup
     and removes quality gate hooks.
     """
-    from pantheon.integrations.hooks import uninstall_hooks
+    from pantheon.integrations.claude import uninstall_hooks
     from pantheon.integrations.spec_kit import find_latest_backup, rollback_integration
 
     cwd = Path.cwd()
@@ -300,47 +300,6 @@ def rollback(force: bool) -> None:
             click.echo("⚠️  Some hooks could not be removed")
     except FileNotFoundError:
         click.echo("⚠️  No .claude/ directory found - hooks already removed?")
-
-
-@main.command()
-def list() -> None:
-    """List available agents and their installation status.
-
-    Shows agents available in the Pantheon library and indicates
-    which ones are installed locally in .claude/agents/
-    """
-    cwd = Path.cwd()
-    agents_dir = cwd / ".claude" / "agents"
-
-    # Get agents from package
-    package_agents_dir = Path(__file__).parent / "agents"
-    available_agents = []
-
-    if package_agents_dir.exists():
-        for agent_file in package_agents_dir.glob("*.md"):
-            agent_name = agent_file.stem.upper()
-            local_path = agents_dir / agent_file.name
-            is_installed = local_path.exists()
-
-            available_agents.append(
-                {"name": agent_name, "file": agent_file.name, "installed": is_installed}
-            )
-
-    if not available_agents:
-        click.echo("No agents available in Pantheon library.")
-        return
-
-    click.echo("Available Agents:\n")
-
-    for agent in available_agents:
-        status = "✓ installed" if agent["installed"] else "  not installed"
-        click.echo(f"  {agent['name']:<10} ({agent['file']:<15}) [{status}]")
-
-    if not agents_dir.exists():
-        agents_path = agents_dir.relative_to(cwd)
-        click.echo(f"\n💡 Run 'pantheon init' to install agents to {agents_path}/")
-    elif not any(a["installed"] for a in available_agents):
-        click.echo("\n💡 Run 'pantheon init' to install agents")
 
 
 if __name__ == "__main__":

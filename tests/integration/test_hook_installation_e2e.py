@@ -9,7 +9,7 @@ import os
 import tempfile
 from pathlib import Path
 
-from pantheon.integrations.hooks import (
+from pantheon.integrations.claude import (
     install_hooks,
     uninstall_hooks,
     validate_hook_installation,
