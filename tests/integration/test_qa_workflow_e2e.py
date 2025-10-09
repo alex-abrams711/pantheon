@@ -299,9 +299,9 @@ class TestQAGuardrails:
         has_validation_principle = any(
             keyword in content for keyword in validation_keywords
         )
-        assert has_validation_principle, (
-            "QA agent should enforce validation-only principle"
-        )
+        assert (
+            has_validation_principle
+        ), "QA agent should enforce validation-only principle"
 
     def test_qa_report_severity_levels(self) -> None:
         """Test that QA agent uses CRITICAL/MAJOR/MINOR severity levels."""

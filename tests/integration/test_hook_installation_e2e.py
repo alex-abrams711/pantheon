@@ -54,9 +54,9 @@ class TestHookInstallationE2E:
             # Verify all scripts are executable
             for script in expected_scripts:
                 script_path = hooks_dir / script
-                assert os.access(script_path, os.X_OK), (
-                    f"Script not executable: {script}"
-                )
+                assert os.access(
+                    script_path, os.X_OK
+                ), f"Script not executable: {script}"
 
             # Verify .claude/settings.json updated with hook configuration
             settings_path = claude_dir / "settings.json"
@@ -216,15 +216,15 @@ class TestHookExecutabilityValidation:
             hooks_dir = project_root / ".pantheon" / "hooks"
             for script_file in hooks_dir.glob("*.sh"):
                 # Check executable permission
-                assert os.access(script_file, os.X_OK), (
-                    f"{script_file.name} is not executable"
-                )
+                assert os.access(
+                    script_file, os.X_OK
+                ), f"{script_file.name} is not executable"
 
                 # Verify it's a shell script (starts with shebang)
                 first_line = script_file.read_text().split("\n")[0]
-                assert first_line.startswith("#!"), (
-                    f"{script_file.name} missing shebang"
-                )
+                assert first_line.startswith(
+                    "#!"
+                ), f"{script_file.name} missing shebang"
 
 
 class TestHookValidationEdgeCases:
