@@ -11,9 +11,8 @@
 2. [Core Components](#core-components)
 3. [Multi-Agent Workflow](#multi-agent-workflow)
 4. [Data Model](#data-model)
-5. [Integration System](#integration-system)
-6. [Quality Hooks](#quality-hooks)
-7. [Design Decisions](#design-decisions)
+5. [Quality Hooks](#quality-hooks)
+6. [Design Decisions](#design-decisions)
 
 ---
 
@@ -27,18 +26,17 @@ Pantheon is a **quality-focused agents library for Claude Code** that implements
 2. **Defense in Depth**: Multiple quality gates (self-check → hook → QA → hook)
 3. **Stateless Sub-Agents**: Each invocation is fresh; orchestrator manages state
 4. **Hook-Based Enforcement**: Quality gates enforced automatically, not just documented
-5. **KISS (Keep It Simple)**: Minimal directives over complex rewrites
+5. **KISS (Keep It Simple)**: Minimal complexity, maximum value
 
 ### System Diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Claude Code Main Agent (Orchestrator)                      │
-│  - Loads context (spec.md, plan.md, tasks.md)              │
-│  - Analyzes dependencies and parallelization strategy      │
+│  - Loads context and analyzes task dependencies            │
 │  - Invokes DEV/QA sub-agents via Task tool                 │
 │  - Creates commits after QA validation + user approval     │
-│  - Enforces phase gates with user checkpoints              │
+│  - Enforces quality gates                                   │
 └─────────────────────────────────────────────────────────────┘
                          │
         ┌────────────────┼────────────────┐
@@ -52,9 +50,9 @@ Pantheon is a **quality-focused agents library for Claude Code** that implements
         └────────────────┼────────────────┘
                          ▼
             ┌─────────────────────────┐
-            │ SubagentStop Hook       │
-            │ - Validates quality     │
-            │ - Blocks if issues      │
+            │ Quality Gate Hook       │
+            │ - Reports status        │
+            │ - Provides context      │
             └─────────────────────────┘
                          │
                          ▼
@@ -70,11 +68,7 @@ Pantheon is a **quality-focused agents library for Claude Code** that implements
             [PASS]            [FAIL]
                 │                 │
                 ▼                 └──→ Re-invoke DEV with fixes
-        ┌──────────────┐
-        │ PreCommit    │
-        │ Hook         │
-        │ - Final gate │
-        └──────────────┘
+        User approves
                 │
                 ▼
           Git Commit Created
@@ -99,9 +93,8 @@ Sub-agents are specialized AI assistants within Claude Code that:
 1. Orchestrator prepares context package
 2. Orchestrator invokes sub-agent via Task tool
 3. Sub-agent executes in separate context window
-4. SubagentStop hook validates work before completion
-5. Sub-agent returns results to orchestrator
-6. Orchestrator processes results and continues workflow
+4. Sub-agent returns results to orchestrator
+5. Orchestrator processes results and continues workflow
 ```
 
 #### DEV Agent
@@ -185,18 +178,16 @@ After all criteria:
 
 ### 2. Orchestrator (Main Agent)
 
-**Identity**: The main Claude Code agent executing commands like `/implement`
+**Identity**: The main Claude Code agent
 
 **Responsibilities**:
-- Load context (spec.md, plan.md, tasks.md)
-- Analyze task dependencies
+- Load context and analyze task dependencies
 - Group independent tasks for parallel execution (max 3)
 - Invoke DEV sub-agents (parallel or sequential)
 - Collect DEV results and handle BLOCKED status
 - Invoke QA sub-agent for batch validation
 - Process QA reports and re-invoke DEV if FAIL
 - Create git commits after QA PASS + user approval
-- Enforce phase gates (present plan → wait → execute → present report → wait)
 
 **Does NOT**:
 - ❌ Write code directly (OrchestratorCodeGate hook blocks this)
@@ -231,9 +222,6 @@ Context packages provide complete information to stateless sub-agents.
 **Lint Command**: npm run lint
 **Type Command**: npm run type-check
 **Coverage Threshold**: 80% branches
-
-## Related Requirements
-FR-010, FR-011, FR-012
 
 ## Tech Stack
 **Language**: TypeScript
@@ -277,7 +265,7 @@ FR-010, FR-011, FR-012
 1. **Max 3 parallel DEV agents** (hard limit)
 2. **Dependency-aware**: Only execute tasks with satisfied dependencies
 3. **Sequential validation**: All DEV complete → then QA validates
-4. **Batch commits**: Orchestrator commits after QA PASS
+4. **Batch commits**: Orchestrator commits after QA PASS + user approval
 
 **Example Dependency Analysis**:
 ```markdown
@@ -308,7 +296,8 @@ DEV agents complete → QA validates
                     │           ├─→ Re-invoke DEV with fixes
                     │           └─→ Loop back to QA (max 3 cycles)
                     │
-                    ├─→ Mark tasks complete
+                    ├─→ Present to user
+                    ├─→ User approves
                     ├─→ Create git commit
                     └─→ Continue workflow
 ```
@@ -368,100 +357,14 @@ DEV agents complete → QA validates
     "coverage_branches": 80,
     "coverage_statements": 80
   },
-  "discovery_source": "slash_command" | "plan.md" | "manual",
+  "discovery_source": "slash_command",
   "contextualized_at": "2025-10-08T12:34:56Z"
 }
 ```
 
 **Discovery**: Generated by `/pantheon:contextualize` slash command using LLM-based analysis
 
-**Consumers**: All agents (DEV, QA), all hooks (SubagentStop, PreCommit, PhaseGate)
-
-### Hook Configuration
-
-**File**: `.claude/settings.json` (updated by `pantheon integrate`)
-
-**Purpose**: Configure Claude Code hooks for quality gates
-
-**Schema**:
-```json
-{
-  "hooks": {
-    "SubagentStop": ".pantheon/hooks/subagent-validation.sh",
-    "PreCommit": ".pantheon/hooks/pre-commit-gate.sh",
-    "PhaseGate": ".pantheon/hooks/phase-transition-gate.sh",
-    "PreToolUse": [
-      {
-        "matcher": "Bash(git commit*)",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .pantheon/hooks/pre-commit-gate.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "Write(*) | Edit(*)",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .pantheon/hooks/orchestrator-code-gate.sh"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
----
-
-## Integration System
-
-### Minimal Directives Approach
-
-Pantheon integrates with Spec Kit using **minimal directives** rather than rewriting commands.
-
-**Philosophy**: Don't modify Spec Kit's logic—just tell it to use agents.
-
-**Integration Files**:
-```
-src/pantheon/integrations/spec_kit/directives/content/
-├── implement.md      # Multi-agent workflow instructions
-├── plan.md           # Quality standards guidance
-├── tasks.md          # Subtask format guidance
-└── claude_md.md      # Orchestration instructions for CLAUDE.md
-```
-
-**Example Integration** (`implement.md` directive):
-```markdown
-## Sub-Agent Integration
-
-**Workflow**: DEV agents → QA validation → Repeat
-
-### 1. Execute Tasks (DEV Agents)
-For each task in tasks.md:
-- Invoke DEV agent with context package
-- For parallel tasks marked `[P]`: Invoke in parallel
-
-### 2. Validate Quality (QA Agent)
-After DEV completes:
-1. DO NOT commit yet
-2. Invoke QA agent with task IDs
-3. Process QA report:
-   - PASS: Present to user → commit after approval
-   - FAIL: Re-invoke DEV with fixes
-
-See `.claude/agents/dev.md` and `.claude/agents/qa.md` for details.
-```
-
-**Insertion Point**: After YAML frontmatter (not after markdown headings)
-
-**Benefits**:
-- ✅ Preserves all Spec Kit functionality
-- ✅ Easy to rollback (remove directive section)
-- ✅ Clear separation with `---` divider
-- ✅ ~300 LOC vs ~2000 LOC (complex rewrite approach)
+**Consumers**: All agents (DEV, QA), all hooks
 
 ---
 
@@ -469,93 +372,110 @@ See `.claude/agents/dev.md` and `.claude/agents/qa.md` for details.
 
 ### Hook Architecture
 
-**Defense in Depth Strategy**:
+**Simplified Quality Gate Strategy**:
 ```
 Layer 1: DEV Self-Check (soft)
     ↓
-Layer 2: SubagentStop Hook (medium - fast sanity check)
+Layer 2: Quality Gate Reports (informational - provides context)
     ↓
 Layer 3: QA Agent Validation (deep - comprehensive analysis)
     ↓
-Layer 4: PreCommit Hook (hard - final gate before commit)
+Layer 4: Quality Gate Reports (informational - shows readiness)
     ↓
-Layer 5: PhaseGate Hook (automatic phase transition validation)
+Layer 5: Orchestrator Decision (interprets reports, takes action)
 ```
 
-### SubagentStop Hook
+### Quality Gate System
 
-**Purpose**: Verify sub-agent completed all required tasks before returning
+**Philosophy**: Provide context, not enforcement. Let orchestrator make informed decisions.
 
-**Event**: `SubagentStop` (runs when DEV or QA completes)
+**Components**:
+1. **quality-report.sh**: Executable script that runs quality checks and generates JSON report
+2. **phase-gate.sh**: Hook wrapper that displays formatted reports at key checkpoints
 
-**File**: `.pantheon/hooks/subagent-validation.sh`
+### quality-report.sh
 
-**Validation (DEV)**:
-- Tests pass
-- Linting passes
-- Type checking passes
-- No console.log in production code
-- No TODO/FIXME comments
-- No debugger statements
+**Location**: `.pantheon/quality-report.sh` (in user projects)
 
-**Validation (QA)**:
-- Verified test results file exists
-- Verified coverage results file exists
-- Verified lint results file exists
-- Verified type check results file exists
+**Generated by**: `/pantheon:contextualize` slash command
 
-**Exit Codes**:
-- `0`: Validation passed, allow completion
-- `2`: Validation failed, block completion
+**Purpose**: Single source of truth for project quality status
 
-### PreCommit Hook
+**What it does**:
+- Reads commands from `.pantheon/quality-config.json`
+- Executes linting, type checking, tests, coverage commands
+- Parses output using language-specific logic (Python/Node.js/Go/etc.)
+- Returns structured JSON report
+- Always exits with code 0 (informational only)
 
-**Purpose**: Final quality gate before git commit
+**Report Structure**:
+```json
+{
+  "timestamp": "2025-10-09T13:30:00Z",
+  "project_root": "/Users/dev/project",
+  "quality": {
+    "linting": {"status": "pass|fail|skipped", "errors": 0},
+    "type_checking": {"status": "pass|fail|skipped", "errors": 0},
+    "tests": {"status": "pass|fail|skipped", "total": 50, "passed": 50, "failed": 0},
+    "coverage": {"status": "pass|fail|skipped", "percentage": 92, "threshold": 80}
+  },
+  "summary": {
+    "ready_for_commit": true
+  }
+}
+```
 
-**Event**: `PreToolUse Bash(git commit*)`
+**Language-Specific Parsing**:
+- **Python**: pytest output parsing, ruff/mypy error counting, coverage.json
+- **Node.js**: jest/vitest parsing, eslint errors, tsc output, coverage-summary.json
+- **Go**: go test output, golangci-lint JSON, coverage profiles
 
-**File**: `.pantheon/hooks/pre-commit-gate.sh`
+### phase-gate.sh
 
-**Validation**:
-- Run full test suite → must pass
-- Run linting → must pass
-- Run type checking → must pass
-- Check coverage → informational only
+**Location**: `.pantheon/hooks/phase-gate.sh`
 
-**Exit Codes**:
-- `0`: All checks passed, allow commit
-- `2`: Checks failed, block commit
+**Purpose**: Hook wrapper that runs quality-report.sh and displays formatted output
 
-### PhaseGate Hook
+**Behavior**:
+- Runs `.pantheon/quality-report.sh`
+- Parses JSON output
+- Displays formatted, human-readable report
+- Shows "READY FOR COMMIT" or "NOT READY FOR COMMIT" summary
+- **Always exits with code 0** - orchestrator interprets and decides
 
-**Purpose**: Validate phase completion before transition
+**Example Output**:
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 QUALITY GATE REPORT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-**Event**: `PreToolUse Task` (when transitioning to new phase without QA validation)
+Quality Checks:
+  Linting:       ✅ PASS
+  Type Checking: ✅ PASS
+  Tests:         ✅ PASS (50/50 passing)
+  Coverage:      ✅ PASS (92% / 80% required)
 
-**File**: `.pantheon/hooks/phase-transition-gate.sh`
-
-**Validation**:
-- Check tasks.md for "QA validated" marker
-- Check tasks.md for "User validated" marker
-- Block if either missing
-
-**Exit Codes**:
-- `0`: Validation complete and approved, allow transition
-- `2`: Missing validation/approval, block transition
+✅ READY FOR COMMIT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
 
 ### OrchestratorCodeGate Hook
 
-**Purpose**: Prevent orchestrator from editing source code
+**Location**: `.pantheon/hooks/orchestrator-code-gate.sh`
+
+**Purpose**: Enforce separation of concerns - orchestrator coordinates, DEV implements
 
 **Event**: `PreToolUse Write(*) | Edit(*)`
 
-**File**: `.pantheon/hooks/orchestrator-code-gate.sh`
-
 **Logic**:
-- **Allow**: Documentation files (tasks.md, README.md, CHANGELOG.md, docs/, .claude/)
+- **Allow**: Documentation files (README.md, CHANGELOG.md, docs/, .claude/, *.md)
 - **Block**: All source code, tests, configuration files
 
-**Purpose**: Enforces separation of concerns—orchestrator coordinates, DEV implements
+**Exit Codes**:
+- `0`: File is documentation, allow edit
+- `2`: File is source code, block edit with guidance message
+
+**Why Separate**: This is about role separation, not quality. Remains independent of quality gate system.
 
 ---
 
@@ -575,21 +495,6 @@ Layer 5: PhaseGate Hook (automatic phase transition validation)
 
 **Why Rejected**: Mode-switching pollutes context, harder to enforce constraints
 
-### Why Minimal Directives (Not Command Rewrites)?
-
-**Decision**: Add integration sections to Spec Kit commands, don't rewrite them
-
-**Rationale**:
-- **90% less complexity**: ~300 LOC vs ~2000 LOC
-- **Preserves existing logic**: All Spec Kit functionality remains
-- **Easier maintenance**: Updates don't require merging algorithms
-- **Faster implementation**: ~4 hours vs multiple days
-- **Clear boundaries**: Integration sections clearly marked with `---`
-
-**Evolution**: Original design used complex file merging with heuristic customization detection
-
-**Learning**: Complexity ≠ value. Simplest solution that works is best.
-
 ### Why Hook-Based Enforcement?
 
 **Decision**: Use Claude Code hooks to enforce quality gates deterministically
@@ -602,7 +507,7 @@ Layer 5: PhaseGate Hook (automatic phase transition validation)
 
 **Alternative Considered**: Rely on agent instructions only
 
-**Why Rejected**: Benchmark Test-1 showed soft enforcement fails under pressure
+**Why Rejected**: Soft enforcement fails under pressure - need hard guarantees
 
 ### Why LLM-Based Quality Discovery?
 
@@ -623,10 +528,10 @@ Layer 5: PhaseGate Hook (automatic phase transition validation)
 **Decision**: Distribute as Python package installable via `uvx`
 
 **Rationale**:
-- **Familiar pattern**: Same as Spec Kit (`uvx spec-kit`)
+- **Simple installation**: `uvx pantheon-agents init`
 - **Rich CLI libraries**: Click, Typer provide excellent UX
-- **Excellent file manipulation**: Python great for markdown/YAML/JSON parsing
-- **Seamless integration**: Works with existing Claude Code + Spec Kit setup
+- **Excellent file manipulation**: Python great for markdown/JSON parsing
+- **Seamless integration**: Works with existing Claude Code setup
 
 **Alternative Considered**: Shell scripts or Node.js package
 
@@ -658,7 +563,36 @@ Layer 5: PhaseGate Hook (automatic phase transition validation)
 
 **Alternative Considered**: DEV agents create commits after self-validation
 
-**Why Rejected**: Benchmark Test-1 showed self-validation insufficient
+**Why Rejected**: Self-validation insufficient, need independent QA
+
+### Why Quality Gate Reports (Not Blocking Hooks)?
+
+**Decision**: Use informational quality reports instead of rigid blocking hooks
+
+**Rationale**:
+- **Context over enforcement**: Orchestrator needs visibility to make intelligent decisions
+- **Single source of truth**: One `quality-report.sh` script instead of 3-4 separate hook scripts
+- **Flexibility**: Orchestrator can interpret reports and decide appropriate actions
+- **Maintainability**: Easier to update quality logic in one place
+- **Debuggability**: Users can run `.pantheon/quality-report.sh` manually to see status
+- **Trust LLM judgment**: Modern LLMs can interpret context better than rigid bash scripts
+
+**What changed**:
+- **Before**: Separate blocking hooks for each checkpoint
+- **After**: Single `phase-gate.sh` that shows reports and always exits 0 (informational)
+- **Kept separate**: `orchestrator-code-gate.sh` (different concern - role separation, not quality)
+
+**Example scenario**:
+- **Old system**: Hook blocks commit because coverage is 79% (threshold 80%). Orchestrator can't proceed.
+- **New system**: Quality report shows "Coverage: 79% (threshold 80%)". Orchestrator interprets context and decides whether to: (a) ask DEV to add tests, (b) proceed if acceptable, or (c) consult user.
+
+**Alternative Considered**: Keep separate blocking hooks for each checkpoint
+
+**Why Rejected**:
+- Too rigid - doesn't account for edge cases or context
+- Duplication across hooks
+- Hard to maintain consistency
+- Users can't easily check status without triggering hooks
 
 ---
 
@@ -716,13 +650,3 @@ DEV/QA (sub-agents):
 ```
 
 **Benefit**: Single responsibility, easier to test and maintain
-
----
-
-## References
-
-- **Research Findings**: `docs/archive/design.md`, `docs/archive/research.md`
-- **v0.2.0 Feature Spec**: `docs/archive/v0.2-feature-spec/spec.md`
-- **Benchmark Test-1**: `docs/BENCHMARK-TEST-1.md`
-- **Hook Scripts**: `.pantheon/hooks/` (in user projects)
-- **Agent Specifications**: `src/pantheon/agents/dev.md`, `src/pantheon/agents/qa.md`

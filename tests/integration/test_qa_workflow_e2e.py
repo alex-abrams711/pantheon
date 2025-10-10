@@ -56,11 +56,11 @@ class TestQAAgentSpecification:
         content = qa_agent_path.read_text()
 
         required_sections = [
-            "## Core Principles",
-            "## Context Package",
-            "## Workflow",
-            "## Quality Standards",
-            "## Guardrails",
+            "## Core Identity",
+            "## Critical Operating Principles",
+            "## Your Workflow",
+            "## Quality Standards for Your Work",
+            "## Issue Severity Guidelines",
         ]
 
         for section in required_sections:
@@ -264,10 +264,10 @@ class TestQAWorkflowIntegration:
         )
         content = qa_agent_path.read_text()
 
-        # Verify workflow sections exist
-        assert "Phase 1: Automated Quality Checks" in content
-        assert "Phase 2: Manual Testing" in content
-        # Phase 3 in the actual spec is "Report Quality Status" not "Generate QA Report"
+        # Verify workflow sections exist (using Step N format)
+        assert "Step 2: Execute Automated Quality Checks" in content
+        assert "Step 3: Manual Testing" in content
+        assert "Step 4: Generate Structured QA Report" in content
 
         # Verify validation steps mentioned
         assert "Tests" in content

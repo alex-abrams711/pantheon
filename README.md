@@ -1,18 +1,16 @@
 # Pantheon Agents Library
 
-A quality-focused agents library for Claude Code with seamless Spec Kit integration.
+A quality-focused agents library for Claude Code.
 
-Pantheon provides production-ready agents that implement structured, quality-first development workflows. The DEV agent ensures every implementation includes proper testing, quality verification, and atomic commits. The QA agent validates all changes before commits are created.
+Pantheon provides production-ready DEV and QA agents that implement structured, quality-first development workflows. The DEV agent ensures every implementation includes proper testing and quality verification. The QA agent validates all changes independently.
 
 ## Features
 
 - 🎯 **Multi-Agent Quality Workflow**: DEV + QA agents with built-in validation loops
 - 🔍 **Intelligent Quality Discovery**: LLM-based discovery for ANY language/framework via `/pantheon:contextualize`
-- 🪝 **Quality Gate Hooks**: SubagentStop, PreCommit, PhaseGate, and Orchestrator Code Gate
+- 📊 **Quality Gate Reports**: Automated quality dashboards at key workflow checkpoints
 - 🛡️ **Enforced Separation of Concerns**: Hooks prevent orchestrator from editing source code
 - ⚡ **Parallel Execution**: Run up to 3 DEV agents simultaneously for independent tasks
-- 🔧 **Spec Kit Integration**: Seamless integration with GitHub's Spec Kit framework
-- 🔄 **Safe Rollback**: Automatic backups and easy rollback capability
 - 📦 **Simple Distribution**: Install via `uvx` - no configuration needed
 - ✅ **Comprehensive Testing**: 111+ tests with 92% coverage on core functionality
 
@@ -49,33 +47,30 @@ Copy the DEV and QA agents to your project:
 pantheon init
 ```
 
-This creates `.claude/agents/dev.md` and `.claude/agents/qa.md` in your project.
+This creates:
+- `.claude/agents/dev.md` - DEV agent for implementation
+- `.claude/agents/qa.md` - QA agent for validation
+- `.claude/commands/pantheon/contextualize.md` - `/pantheon:contextualize` slash command for quality discovery
+- `.pantheon/hooks/` - Quality gate hooks for workflow automation
 
-#### 2. Integrate with Spec Kit (Optional)
+#### 2. Discover Quality Commands
 
-If you have Spec Kit installed, integrate DEV + QA agents and install quality hooks:
+In Claude Code, run the contextualize command to discover your project's quality commands:
 
-```bash
-pantheon integrate
+```
+/pantheon:contextualize
 ```
 
-This:
-- Adds minimal directives to `/implement`, `/plan`, and `/tasks` commands
-- Installs quality gate hooks (SubagentStop, PreCommit, PhaseGate)
-- Updates `.claude/settings.json` with hook configuration
+This analyzes your project and generates:
+- `.pantheon/quality-config.json` - Quality commands configuration
+- `.pantheon/quality-report.sh` - Executable quality status script
 
 #### 3. Use DEV Agent
 
-In Claude Code, DEV will be automatically available:
+In Claude Code, invoke the DEV agent directly:
 
 ```
 Use the DEV agent to implement the authentication feature
-```
-
-Or with Spec Kit:
-
-```
-/implement
 ```
 
 ## Commands
@@ -84,57 +79,16 @@ Or with Spec Kit:
 
 Initialize Pantheon agents in your project.
 
-**Options:**
-- `--auto-integrate` - Automatically integrate with Spec Kit if detected (skip prompt)
-
 **What it does:**
 - Creates `.claude/agents/` directory
 - Copies DEV and QA agents to your project
-- Detects Spec Kit and offers integration
+- Installs `/pantheon:contextualize` slash command for quality discovery
+- Installs quality gate hooks (phase-gate.sh, orchestrator-code-gate.sh)
+- Configures `.claude/settings.json` with hook paths
 
 **Example:**
 ```bash
-pantheon init --auto-integrate
-```
-
-### `pantheon integrate`
-
-Integrate DEV + QA agents with Spec Kit commands, generate quality config, and install quality hooks.
-
-**Options:**
-- `--dry-run` - Preview changes without applying them
-
-**What it does:**
-- Creates timestamped backup of command files
-- Adds integration directives to `/implement`, `/plan`, `/tasks`
-- Installs quality gate hooks in `.pantheon/hooks/`
-- Updates `.claude/settings.json` with hook paths
-- Validates integration success
-
-**Example:**
-```bash
-pantheon integrate --dry-run  # Preview changes
-pantheon integrate            # Apply integration
-```
-
-### `pantheon rollback`
-
-Rollback to the most recent backup and uninstall quality hooks.
-
-**Options:**
-- `--force` - Skip confirmation prompt
-
-**What it does:**
-- Finds most recent integration backup
-- Restores original command files
-- Removes quality gate hooks from `.pantheon/hooks/`
-- Cleans up `.claude/settings.json`
-- Preserves `.pantheon/quality-config.json`
-- Reports restored files
-
-**Example:**
-```bash
-pantheon rollback --force
+pantheon init
 ```
 
 ## Quality Discovery
@@ -150,7 +104,6 @@ In Claude Code, run:
 
 This uses LLM-based analysis to discover quality commands for **ANY language and framework**:
 - Analyzes project structure (config files, package managers, build tools)
-- Checks plan.md for explicit commands (if using Spec Kit)
 - Understands project conventions from README/docs
 - Detects modern tools automatically (Bun, Deno, uv, vitest, Biome, etc.)
 - Handles monorepos and multi-language projects
@@ -185,10 +138,6 @@ build        → pnpm run build
 Config written to: .pantheon/quality-config.json
 ```
 
-### Without Contextualization
-
-If you don't use the slash command, `pantheon integrate` will only parse explicit quality commands from plan.md (if present). Without plan.md, quality commands will be empty. For best results and automatic discovery, use `/pantheon:contextualize`.
-
 ### Example Quality Config
 ```json
 {
@@ -209,6 +158,69 @@ If you don't use the slash command, `pantheon integrate` will only parse explici
   "contextualized_at": "2025-10-08T12:34:56Z"
 }
 ```
+
+## Quality Gate System
+
+Pantheon provides automated quality reporting at key workflow checkpoints to give the orchestrator full visibility into project status.
+
+### How It Works
+
+When you run `/pantheon:contextualize`, it generates two files:
+
+1. **`.pantheon/quality-config.json`**: Quality commands configuration
+2. **`.pantheon/quality-report.sh`**: Executable script that runs quality checks
+
+The quality gate hook (`phase-gate.sh`) automatically runs at these checkpoints:
+- After DEV/QA agent completion
+- Before git commits
+- Before phase transitions
+
+### Quality Report Example
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 QUALITY GATE REPORT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Quality Checks:
+  Linting:       ✅ PASS
+  Type Checking: ✅ PASS
+  Tests:         ✅ PASS (50/50 passing)
+  Coverage:      ✅ PASS (92% / 80% required)
+
+Phase Status:
+  Tasks:         5/5 completed
+  QA Validated:  ✅ Yes
+  User Validated: ❌ No
+
+⚠️ NOT READY FOR COMMIT
+
+Blocking issues:
+  • User approval not received
+
+Recommended actions:
+  1. Present phase completion report to user
+  2. Obtain user approval before committing
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+### Manual Quality Check
+
+You can run the quality report manually anytime:
+
+```bash
+.pantheon/quality-report.sh
+```
+
+This outputs structured JSON with complete quality status, which the orchestrator uses to make informed decisions.
+
+### Philosophy
+
+Quality reports are **informational, not blocking**:
+- They provide context to the orchestrator
+- The orchestrator interprets reports and decides appropriate actions
+- Flexible approach that accounts for edge cases and project context
+- Single source of truth (one script vs. multiple separate hooks)
 
 ## Multi-Agent Workflow
 
@@ -248,7 +260,7 @@ For independent tasks marked `[P]` in tasks.md:
 - If QA returns FAIL: DEV agents fix issues, QA re-validates
 - Atomic commits with quality metrics in message
 
-**Quality Gates**: Pre-commit hook enforces both QA validation AND user approval before allowing commits.
+**Quality Gates**: Quality report shows status at commit time, providing orchestrator with full context to make informed decisions.
 
 ## DEV Agent Workflow
 
@@ -279,35 +291,6 @@ For each subtask:
 - Present results to user
 - Handle feedback and rework if needed
 
-## Integration with Spec Kit
-
-When integrated with Spec Kit, the DEV agent enhances your workflow:
-
-### `/plan` Enhancement
-Includes quality standards in plan output:
-- Lint command (e.g., `npm run lint`)
-- Type check command (e.g., `tsc --noEmit`)
-- Test command (e.g., `npm test`)
-- Coverage requirement
-
-### `/tasks` Enhancement
-Task format includes subtasks as acceptance criteria:
-```markdown
-**T001** [Task Description] (`path/to/file.ext`)
-- [ ] Subtask 1: [Specific acceptance criterion]
-- [ ] Subtask 2: [Specific acceptance criterion]
-- Dependencies: [Task IDs or "None"]
-- Implements: [FR-XXX references]
-```
-
-### `/implement` Enhancement
-Delegates task execution to DEV and QA agents:
-1. **DEV Execution**: Prepares context package and invokes DEV for each task
-2. **Parallel Support**: Runs up to 3 DEV agents simultaneously for `[P]` tasks
-3. **QA Validation**: Invokes QA agent to validate batch of completed tasks
-4. **Commit on PASS**: Creates commits only after QA returns PASS status
-5. **Rework on FAIL**: Re-invokes DEV to fix issues if QA returns FAIL
-
 ## Architecture
 
 Pantheon uses a multi-agent architecture with three key roles:
@@ -319,38 +302,10 @@ Quality is enforced through **defense in depth**: agent self-checks → hooks �
 
 **For detailed architecture documentation**, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 
-## Safety & Rollback
-
-Every integration creates a timestamped backup:
-
-```
-.integration-backup-20251001-143000/
-├── implement.md
-├── plan.md
-└── tasks.md
-```
-
-Rollback is always available:
-```bash
-pantheon rollback
-```
-
 ## Requirements
 
 - Python 3.9+
 - Claude Code (for using agents)
-- Spec Kit v0.0.55+ (optional, for integration)
-
-### Spec Kit Compatibility
-
-Pantheon supports both Spec Kit command formats:
-
-- **Pre-v0.0.57**: `implement.md`, `plan.md`, `tasks.md`
-- **v0.0.57+**: `speckit.implement.md`, `speckit.plan.md`, `speckit.tasks.md`
-
-Format detection is automatic - Pantheon will detect which version you have installed and integrate accordingly.
-
-**Tested versions:** v0.0.55, v0.0.56, v0.0.57, v0.0.58
 
 ## Development
 
@@ -410,8 +365,7 @@ MIT License - see LICENSE file for details
 - **Repository**: https://github.com/alex-abrams711/pantheon
 - **Issues**: https://github.com/alex-abrams711/pantheon/issues
 - **Claude Code**: https://docs.claude.com/en/docs/claude-code
-- **Spec Kit**: https://github.com/github/spec-kit
 
 ## Acknowledgments
 
-Built on Claude Code's sub-agent architecture and designed to integrate seamlessly with GitHub's Spec Kit framework.
+Built on Claude Code's sub-agent architecture.

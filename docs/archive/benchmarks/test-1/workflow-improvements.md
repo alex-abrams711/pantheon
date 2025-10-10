@@ -26,7 +26,7 @@ The benchmark revealed **critical workflow gaps** in the Pantheon DEV agent impl
 2. [Manual Observations & Root Causes](#manual-observations--root-causes)
 3. [Research Findings](#research-findings)
 4. [Proposed Multi-Agent Architecture](#proposed-multi-agent-architecture)
-5. [Hook-Based Quality Gates](#hook-based-quality-gates)
+5. [Hook-Based Quality Gates](#hook-based-phase-gates)
 6. [Parallel Execution Patterns](#parallel-execution-patterns)
 7. [Specific Recommendations](#specific-recommendations)
 8. [Implementation Plan](#implementation-plan)

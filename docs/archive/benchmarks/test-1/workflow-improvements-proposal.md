@@ -26,7 +26,7 @@ This proposal defines the **multi-agent quality-first workflow** for Pantheon v0
 1. [Architecture Overview](#architecture-overview)
 2. [Agent Roles & Responsibilities](#agent-roles--responsibilities)
 3. [Workflow Phases](#workflow-phases)
-4. [Hook-Based Quality Gates](#hook-based-quality-gates)
+4. [Hook-Based Quality Gates](#hook-based-phase-gates)
 5. [Parallel Execution Strategy](#parallel-execution-strategy)
 6. [Implementation Specifications](#implementation-specifications)
 7. [Implementation Plan](#implementation-plan)

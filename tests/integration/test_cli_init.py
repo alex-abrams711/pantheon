@@ -96,36 +96,6 @@ def test_init_creates_claude_directory(tmp_path: Path) -> None:
         assert "Created .claude" in result.output
 
 
-def test_init_with_auto_integrate_skips_prompt(tmp_path: Path) -> None:
-    """Test that 'pantheon init --auto-integrate' skips Spec Kit prompt."""
-    runner = CliRunner()
-
-    with runner.isolated_filesystem(temp_dir=tmp_path) as td:
-        project_dir = Path(td)
-
-        # Create .specify/ and .claude/commands/ to simulate Spec Kit
-        (project_dir / ".specify").mkdir()
-        commands_dir = project_dir / ".claude" / "commands"
-        commands_dir.mkdir(parents=True)
-
-        # Create minimal Spec Kit command files
-        (commands_dir / "implement.md").write_text("# /implement\n")
-        (commands_dir / "plan.md").write_text("# /plan\n")
-        (commands_dir / "tasks.md").write_text("# /tasks\n")
-
-        # Run init with --auto-integrate
-        result = runner.invoke(main, ["init", "--auto-integrate"])
-
-        # Should succeed
-        assert result.exit_code == 0
-
-        # Should detect Spec Kit
-        assert "Spec Kit detected" in result.output
-
-        # Should not prompt user (auto-integrate)
-        assert "Would you like to integrate" not in result.output
-
-
 def test_init_agent_files_have_yaml_frontmatter(tmp_path: Path) -> None:
     """Test that copied agent files contain valid YAML frontmatter."""
     runner = CliRunner()
@@ -155,3 +125,114 @@ def test_init_agent_files_have_yaml_frontmatter(tmp_path: Path) -> None:
         assert "name:" in qa_content
         assert "description:" in qa_content
         assert "tools:" in qa_content
+
+
+def test_init_copies_contextualize_command(tmp_path: Path) -> None:
+    """Test that 'pantheon init' copies /pantheon:contextualize command."""
+    runner = CliRunner()
+
+    with runner.isolated_filesystem(temp_dir=tmp_path) as td:
+        project_dir = Path(td)
+
+        # Run init command
+        result = runner.invoke(main, ["init"])
+
+        # Should succeed
+        assert result.exit_code == 0
+
+        # Should create .claude/commands/pantheon/ directory
+        pantheon_commands_dir = project_dir / ".claude" / "commands" / "pantheon"
+        assert pantheon_commands_dir.exists()
+        assert pantheon_commands_dir.is_dir()
+
+        # Should copy contextualize.md
+        contextualize_cmd = pantheon_commands_dir / "contextualize.md"
+        assert contextualize_cmd.exists(), "contextualize.md should be copied"
+        assert (
+            contextualize_cmd.stat().st_size > 0
+        ), "contextualize.md should have content"
+
+        # Should contain quality report generation logic
+        content = contextualize_cmd.read_text()
+        assert "quality-report.sh" in content
+        assert "quality-config.json" in content
+
+        # Output should mention copying the command
+        assert "/pantheon:contextualize" in result.output
+
+
+def test_init_installs_hooks(tmp_path: Path) -> None:
+    """Test that 'pantheon init' installs quality gate hooks."""
+    runner = CliRunner()
+
+    with runner.isolated_filesystem(temp_dir=tmp_path) as td:
+        project_dir = Path(td)
+
+        # Run init command
+        result = runner.invoke(main, ["init"])
+
+        # Should succeed
+        assert result.exit_code == 0
+
+        # Should create .pantheon/hooks/ directory
+        hooks_dir = project_dir / ".pantheon" / "hooks"
+        assert hooks_dir.exists(), ".pantheon/hooks/ directory should be created"
+        assert hooks_dir.is_dir()
+
+        # Should copy hook scripts
+        quality_gate_hook = hooks_dir / "phase-gate.sh"
+        orchestrator_gate_hook = hooks_dir / "orchestrator-code-gate.sh"
+
+        assert quality_gate_hook.exists(), "phase-gate.sh should be copied"
+        assert (
+            orchestrator_gate_hook.exists()
+        ), "orchestrator-code-gate.sh should be copied"
+
+        # Hook scripts should be executable
+        import stat
+
+        quality_gate_stat = quality_gate_hook.stat()
+        orchestrator_gate_stat = orchestrator_gate_hook.stat()
+
+        assert (
+            quality_gate_stat.st_mode & stat.S_IXUSR
+        ), "phase-gate.sh should be executable"
+        assert (
+            orchestrator_gate_stat.st_mode & stat.S_IXUSR
+        ), "orchestrator-code-gate.sh should be executable"
+
+        # Should update .claude/settings.json with hook configuration
+        settings_path = project_dir / ".claude" / "settings.json"
+        assert settings_path.exists(), ".claude/settings.json should be created"
+
+        import json
+
+        with open(settings_path) as f:
+            settings = json.load(f)
+
+        # Check hooks are configured
+        assert "hooks" in settings, "settings.json should have 'hooks' key"
+        hooks_config = settings["hooks"]
+
+        # SubagentStop hook for quality gate
+        assert "SubagentStop" in hooks_config, "SubagentStop hook should be configured"
+        assert isinstance(hooks_config["SubagentStop"], list)
+
+        # PreToolUse hooks for quality gate and orchestrator code gate
+        assert "PreToolUse" in hooks_config, "PreToolUse hook should be configured"
+        assert isinstance(hooks_config["PreToolUse"], list)
+
+        # Verify hook commands reference correct scripts
+        pre_tool_use_matchers = [
+            hook.get("matcher") for hook in hooks_config["PreToolUse"]
+        ]
+        assert "Bash(git commit*)" in pre_tool_use_matchers
+        assert "Task" in pre_tool_use_matchers
+        assert "Write(*) | Edit(*)" in pre_tool_use_matchers
+
+        # Output should mention hook installation
+        assert "Installing quality gate hooks" in result.output
+        assert (
+            "Quality hooks installed successfully" in result.output
+            or "⚠️" in result.output
+        )

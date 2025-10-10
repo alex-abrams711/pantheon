@@ -7,6 +7,102 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2025-10-09
+
+### BREAKING CHANGES
+**Spec Kit Integration Completely Removed**
+
+Pantheon is now a standalone agents library and no longer integrates with GitHub's Spec Kit framework. This simplifies the codebase and focuses on core agent functionality.
+
+### Removed
+- **`pantheon integrate` command**: Removed command that integrated with Spec Kit
+  - No longer modifies `/implement`, `/plan`, `/tasks` commands
+  - No longer auto-integrates when running `pantheon init`
+  - Removed all Spec Kit command file modification logic
+- **`pantheon rollback` command**: Removed command that rolled back Spec Kit integration
+- **Spec Kit Integration Module**: Deleted entire `src/pantheon/integrations/spec_kit/` directory
+  - `integration.py` - Integration logic
+  - `backup.py` - Backup/rollback functionality
+  - `detection.py` - Spec Kit detection
+  - `validation.py` - Integration validation
+  - `types.py` - Type definitions
+  - `directives/` - Integration directive content
+- **Spec Kit Integration Tests**: Removed all Spec Kit-related test files
+  - `tests/test_spec_kit.py` - Unit tests for integration
+  - `tests/test_integration.py` - E2E integration tests
+  - `scripts/test_spec_kit_integration.sh` - Integration test script
+  - Updated `tests/integration/test_cli_init.py` to remove auto-integrate test
+
+### Changed
+- **`pantheon init` command**: Simplified to only copy agents
+  - Removed `--auto-integrate` flag
+  - No longer detects Spec Kit or offers integration
+  - Only creates agents and contextualize command
+- **CLI Docstring**: Updated to reflect standalone agent library
+  - Removed mentions of "seamless integration with frameworks"
+  - Focus on quality-focused DEV and QA agents
+- **README.md**: Completely rewritten without Spec Kit integration
+  - Removed "Spec Kit Integration" feature
+  - Removed integration workflow sections
+  - Removed `pantheon integrate` and `pantheon rollback` documentation
+  - Removed "Safety & Rollback" section
+  - Removed Spec Kit compatibility section
+  - Removed Spec Kit link from Links section
+  - Updated acknowledgments to remove Spec Kit mention
+  - Updated Basic Usage to focus on direct DEV agent invocation
+- **ARCHITECTURE.md**: Streamlined to focus on core architecture
+  - Removed "Integration System" section
+  - Removed "Minimal Directives Approach" design decision
+  - Removed Spec Kit-specific context and examples
+  - Focused on multi-agent workflow and quality gates
+  - Reduced from 802 lines to 653 lines
+- **CLAUDE.md**: Updated to remove Spec Kit workflow references (pending)
+
+### Migration Guide
+
+**For Existing Users**:
+
+If you were using Pantheon with Spec Kit integration, you'll need to invoke DEV and QA agents directly:
+
+**Before (with Spec Kit)**:
+```
+/implement
+```
+
+**After (standalone)**:
+```
+Use the DEV agent to implement [task description]
+```
+
+**What Still Works**:
+- ✅ DEV and QA agents (unchanged)
+- ✅ `/pantheon:contextualize` for quality discovery
+- ✅ Quality gate hooks and reporting
+- ✅ Parallel execution support
+- ✅ Multi-agent workflows
+
+**What's Removed**:
+- ❌ Auto-modification of `/implement`, `/plan`, `/tasks`commands
+- ❌ Integration with Spec Kit workflow
+- ❌ `pantheon integrate` and `pantheon rollback` commands
+- ❌ Spec Kit command file backups
+
+**New Workflow**:
+1. Run `pantheon init` to install agents
+2. In Claude Code, run `/pantheon:contextualize` to discover quality commands
+3. Directly invoke DEV agent: "Use the DEV agent to implement [feature]"
+4. After DEV completes, invoke QA: "Use the QA agent to validate the changes"
+
+### Rationale
+
+This change simplifies Pantheon's architecture and reduces maintenance burden:
+- **Simpler**: No command file modification, no backup/rollback complexity
+- **Focused**: Pure agents library, not a framework integration tool
+- **Cleaner**: ~2000+ lines of integration code removed
+- **Flexible**: Works with any workflow, not tied to Spec Kit
+
+Pantheon's core value is its quality-focused DEV and QA agents. By removing the Spec Kit integration layer, we make Pantheon easier to understand, maintain, and use in any development workflow.
+
 ## [0.3.0] - 2025-10-08
 
 ### Added

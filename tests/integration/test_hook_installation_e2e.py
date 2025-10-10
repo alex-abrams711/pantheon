@@ -9,9 +9,8 @@ import os
 import tempfile
 from pathlib import Path
 
-from pantheon.integrations.claude import (
+from pantheon.hooks import (
     install_hooks,
-    uninstall_hooks,
     validate_hook_installation,
 )
 
@@ -31,20 +30,18 @@ class TestHookInstallationE2E:
             # Install hooks
             result = install_hooks(project_root)
 
-            # Verify all three hooks installed successfully
-            assert result["SubagentStop"] is True
-            assert result["PreCommit"] is True
-            assert result["PhaseTransitionGate"] is True
+            # Verify both hooks installed successfully
+            assert result["QualityGate"] is True
+            assert result["OrchestratorCodeGate"] is True
 
-            # Verify .pantheon/hooks/ directory created with 3 scripts
+            # Verify .pantheon/hooks/ directory created with 2 scripts
             hooks_dir = project_root / ".pantheon" / "hooks"
             assert hooks_dir.exists()
             assert hooks_dir.is_dir()
 
             expected_scripts = [
-                "subagent-validation.sh",
-                "pre-commit-gate.sh",
-                "phase-transition-gate.sh",
+                "phase-gate.sh",
+                "orchestrator-code-gate.sh",
             ]
             for script in expected_scripts:
                 script_path = hooks_dir / script
@@ -72,9 +69,9 @@ class TestHookInstallationE2E:
             # Verify hook paths are correct
             subagent_hooks = settings["hooks"]["SubagentStop"]
             pretool_hooks = settings["hooks"]["PreToolUse"]
-            assert any("subagent-validation.sh" in str(h) for h in subagent_hooks)
-            assert any("pre-commit-gate.sh" in str(h) for h in pretool_hooks)
-            assert any("phase-transition-gate.sh" in str(h) for h in pretool_hooks)
+            assert any("phase-gate.sh" in str(h) for h in subagent_hooks)
+            assert any("phase-gate.sh" in str(h) for h in pretool_hooks)
+            assert any("orchestrator-code-gate.sh" in str(h) for h in pretool_hooks)
 
     def test_hook_validation_success(self) -> None:
         """Test hook validation after successful installation."""
@@ -89,61 +86,11 @@ class TestHookInstallationE2E:
             # Validate installation
             validation = validate_hook_installation(project_root)
 
-            # All hooks should validate as OK
-            assert validation["SubagentStop"] == "OK"
-            assert validation["PreCommit"] == "OK"
-            assert validation["PhaseTransitionGate"] == "OK"
-
-    def test_rollback_uninstall_workflow(self) -> None:
-        """Test rollback/uninstall workflow from quickstart.md Step 8."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            project_root = Path(tmpdir)
-            claude_dir = project_root / ".claude"
-            claude_dir.mkdir()
-
-            # Create .pantheon/quality-config.json (should be preserved)
-            pantheon_dir = project_root / ".pantheon"
-            pantheon_dir.mkdir()
-            quality_config = pantheon_dir / "quality-config.json"
-            quality_config.write_text(
-                json.dumps(
-                    {
-                        "version": "1.0",
-                        "project_type": "python",
-                        "commands": {},
-                        "thresholds": {},
-                    }
-                )
-            )
-
-            # Install hooks
-            install_hooks(project_root)
-
-            # Verify hooks installed
-            hooks_dir = pantheon_dir / "hooks"
-            assert hooks_dir.exists()
-
-            settings_path = claude_dir / "settings.json"
-            with open(settings_path) as f:
-                settings_before = json.load(f)
-            assert "hooks" in settings_before
-
-            # Uninstall hooks
-            success = uninstall_hooks(project_root)
-            assert success is True
-
-            # Verify .pantheon/hooks/ directory deleted
-            assert not hooks_dir.exists()
-
-            # Verify hook entries removed from settings.json
-            with open(settings_path) as f:
-                settings_after = json.load(f)
-            assert "hooks" not in settings_after
-
-            # Verify .pantheon/quality-config.json preserved
-            assert quality_config.exists()
-            config_data = json.loads(quality_config.read_text())
-            assert config_data["version"] == "1.0"
+            # All hooks should validate as OK (phase-gate used in multiple places)
+            assert validation["QualityGate-SubagentStop"] == "OK"
+            assert validation["QualityGate-PreCommit"] == "OK"
+            assert validation["QualityGate-Task"] == "OK"
+            assert validation["OrchestratorCodeGate"] == "OK"
 
     def test_install_with_existing_settings_json(self) -> None:
         """Test that installation preserves existing settings.json content."""
@@ -175,6 +122,7 @@ class TestHookInstallationE2E:
             # Verify hooks added
             assert "hooks" in updated_settings
             assert "SubagentStop" in updated_settings["hooks"]
+            assert "PreToolUse" in updated_settings["hooks"]
 
     def test_install_creates_settings_json_if_missing(self) -> None:
         """Test that installation creates settings.json if it doesn't exist."""
@@ -241,17 +189,18 @@ class TestHookValidationEdgeCases:
 
             # Delete one script
             hooks_dir = project_root / ".pantheon" / "hooks"
-            (hooks_dir / "subagent-validation.sh").unlink()
+            (hooks_dir / "phase-gate.sh").unlink()
 
             # Validate
             validation = validate_hook_installation(project_root)
 
-            # SubagentStop should report missing
-            assert "Missing" in validation["SubagentStop"]
+            # QualityGate hooks should report missing (affects all three usages)
+            assert "Missing" in validation["QualityGate-SubagentStop"]
+            assert "Missing" in validation["QualityGate-PreCommit"]
+            assert "Missing" in validation["QualityGate-Task"]
 
-            # Others should still be OK
-            assert validation["PreCommit"] == "OK"
-            assert validation["PhaseTransitionGate"] == "OK"
+            # OrchestratorCodeGate should still be OK
+            assert validation["OrchestratorCodeGate"] == "OK"
 
     def test_validation_detects_non_executable_script(self) -> None:
         """Test that validation detects when a script is not executable."""
@@ -264,15 +213,16 @@ class TestHookValidationEdgeCases:
 
             # Remove execute permission from one script
             hooks_dir = project_root / ".pantheon" / "hooks"
-            script_path = hooks_dir / "pre-commit-gate.sh"
+            script_path = hooks_dir / "orchestrator-code-gate.sh"
             os.chmod(script_path, 0o644)  # Read/write only, no execute
 
             # Validate
             validation = validate_hook_installation(project_root)
 
-            # PreCommit should report permission issue
-            assert "executable permission" in validation["PreCommit"]
+            # OrchestratorCodeGate should report permission issue
+            assert "executable permission" in validation["OrchestratorCodeGate"]
 
-            # Others should still be OK
-            assert validation["SubagentStop"] == "OK"
-            assert validation["PhaseTransitionGate"] == "OK"
+            # QualityGate hooks should still be OK
+            assert validation["QualityGate-SubagentStop"] == "OK"
+            assert validation["QualityGate-PreCommit"] == "OK"
+            assert validation["QualityGate-Task"] == "OK"

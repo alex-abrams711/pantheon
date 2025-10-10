@@ -50,11 +50,11 @@ Pantheon uses a multi-agent architecture with DEV and QA agents for quality-firs
 
 **Your Role**: Coordinator and quality gatekeeper - you delegate to specialists, never implement directly.
 
-**Hook Enforcement**: Quality gates are enforced via hooks to prevent workflow violations:
-- **PreToolUse Task**: Blocks DEV agent invocation if transitioning to new phase without QA validation and user approval
-- **PreToolUse Bash(git commit*)**: Blocks commits without QA validation and user approval
-- **PreToolUse Write/Edit**: Blocks orchestrator from editing source code (only allows documentation)
-- **SubagentStop**: Validates DEV/QA agent completion before returning results
+**Quality Gate System**: Automated quality reporting provides visibility at key workflow checkpoints:
+- **Quality reports appear automatically** when invoking DEV/QA agents, attempting commits, or transitioning phases
+- Reports show: linting, type checking, tests, coverage, and phase status (tasks complete, QA validated, user validated)
+- **Interpret reports** to decide next steps - reports are informational, not blocking
+- **Orchestrator Code Gate**: Prevents orchestrator from editing source code (enforces separation of concerns)
 
 ### Orchestrator Role & Responsibilities
 
@@ -86,6 +86,44 @@ Pantheon uses a multi-agent architecture with DEV and QA agents for quality-firs
 **Think of yourself as a project manager**: You delegate work to specialists (DEV agents),
 validate their work (via QA agent), and ensure quality gates are met. You coordinate,
 but you don't build.
+
+### Quality Report Interpretation
+
+Quality reports appear automatically at workflow checkpoints. Use them to guide decisions:
+
+**Report Structure**:
+```
+📊 QUALITY GATE REPORT
+─────────────────────────────
+
+Quality Checks:
+  Linting:       ✅ PASS / ❌ FAIL (N errors)
+  Type Checking: ✅ PASS / ❌ FAIL (N errors)
+  Tests:         ✅ PASS / ❌ FAIL (N/M passing)
+  Coverage:      ✅ PASS / ❌ FAIL (X% / Y% required)
+
+Phase Status:
+  Tasks:         N/M completed
+  QA Validated:  ✅ Yes / ❌ No
+  User Validated: ✅ Yes / ❌ No
+
+✅ READY FOR COMMIT / ⚠️ NOT READY FOR COMMIT
+```
+
+**Decision Making**:
+- **All PASS + validations complete** → Ready to commit
+- **Quality checks failing** → Re-invoke DEV agent with fixes
+- **QA not validated** → Invoke QA agent to validate work
+- **User not validated** → Present phase report and wait for approval
+- **Tests failing** → Critical - must fix before proceeding
+- **Coverage low** → Important - aim to improve before commit
+
+**When reports appear**:
+- After DEV/QA agent completion (SubagentStop hook)
+- Before git commits (PreCommit hook)
+- Before phase transitions (PreToolUse Task hook)
+
+Use quality reports as your **dashboard** - they show current state and guide next actions.
 
 ### Parallel Execution Strategy
 
